@@ -2,7 +2,7 @@ require 'aws-sdk-s3'
 require 'fileutils'
 
 task :snapshot do
-  FileUtils.mkdir "ruby"
+  FileUtils.mkdir "pkg"
   `svn co http://svn.ruby-lang.org/repos/ruby/trunk/tool`
   `ruby tool/make-snapshot -archname=snapshot pkg trunk`
   upload_s3("snapshot")
