@@ -27,7 +27,7 @@ end
 
 def upload_s3(name)
   s3 = Aws::S3::Resource.new(region:'us-east-1')
-  %w(.tar.gz .tar.bz2 tar.xz .zip).each do |ext|
+  %w(.tar.gz .tar.bz2 .tar.xz .zip).each do |ext|
     obj = s3.bucket('ftp.r-l.o').object("pub/ruby/#{name}#{ext}")
     obj.upload_file("pkg/#{name}#{ext}")
   end
