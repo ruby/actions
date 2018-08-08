@@ -1,0 +1,30 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    aws-eventstream (1.0.1)
+    aws-partitions (1.97.0)
+    aws-sdk-core (3.24.0)
+      aws-eventstream (~> 1.0)
+      aws-partitions (~> 1.0)
+      aws-sigv4 (~> 1.0)
+      jmespath (~> 1.0)
+    aws-sdk-kms (1.7.0)
+      aws-sdk-core (~> 3)
+      aws-sigv4 (~> 1.0)
+    aws-sdk-s3 (1.17.0)
+      aws-sdk-core (~> 3, >= 3.21.2)
+      aws-sdk-kms (~> 1)
+      aws-sigv4 (~> 1.0)
+    aws-sigv4 (1.0.3)
+    jmespath (1.4.0)
+    rake (12.3.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  aws-sdk-s3
+  rake
+
+BUNDLED WITH
+   1.16.3
