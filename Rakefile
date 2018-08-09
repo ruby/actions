@@ -1,6 +1,8 @@
 require 'aws-sdk-s3'
 require 'fileutils'
 
+PKG_EXTS = %w(.tar.gz .tar.bz2 .tar.xz .zip)
+
 task :snapshot do
   FileUtils.mkdir "pkg"
   `svn co http://svn.ruby-lang.org/repos/ruby/trunk/tool`
@@ -18,7 +20,7 @@ task "snapshot:stable" do
 end
 
 def purge_fastly(name)
-  pkgs = %w(.tar.gz .tar.bz2 .zip).map{|ext| "#{name}#{ext}"}
+  pkgs = PKG_EXTS.map{|ext| "#{name}#{ext}"}
 
   pkgs.each do |pkg|
     `curl -X PURGE -H "Fastly-Soft-Purge:1" https://cache.ruby-lang.org/pub/ruby/#{pkg}`
@@ -27,7 +29,7 @@ end
 
 def upload_s3(name)
   s3 = Aws::S3::Resource.new(region:'us-east-1')
-  %w(.tar.gz .tar.bz2 .tar.xz .zip).each do |ext|
+  PKG_EXTS.each do |ext|
     obj = s3.bucket('ftp.r-l.o').object("pub/ruby/#{name}#{ext}")
     obj.upload_file("pkg/#{name}#{ext}")
   end
