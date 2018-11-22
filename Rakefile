@@ -5,7 +5,7 @@ require 'open-uri'
 require 'pathname'
 
 PKG_EXTS = %w(.tar.gz .tar.bz2 .tar.xz .zip)
-EXT_NAES = %w(.gz .bz2 .zip .xz)
+EXT_NAMES = %w(.gz .bz2 .zip .xz)
 DIRS = %w(1.0 1.1a 1.1b 1.1c 1.1d 1.2 1.3 1.4 1.6 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6)
 
 task :snapshot do
@@ -46,7 +46,7 @@ task "update_index" do
     f.puts "name\turl\tsha1\tsha256\tsha512"
     DIRS.each do |dir|
       s3.bucket('ftp.r-l.o').objects({prefix: "pub/ruby/#{dir}"}).each do |pkg|
-        next unless EXT_NAES.include?(Pathname(pkg.key).extname)
+        next unless EXT_NAMES.include?(Pathname(pkg.key).extname)
         next unless Pathname(pkg.key).basename.to_s =~ /ruby-/
 
         digests = %w(SHA1 SHA256 SHA512).map do |algm|
