@@ -19,7 +19,7 @@ end
 task "snapshot:stable" do
   FileUtils.mkdir "pkg"
   `svn co https://svn.ruby-lang.org/repos/ruby/trunk/tool`
-  `ruby tool/make-snapshot -archname=stable-snapshot pkg branches/ruby_2_5`
+  `ruby tool/make-snapshot -archname=stable-snapshot pkg branches/ruby_2_6`
   upload_s3("stable-snapshot")
   purge_fastly("stable-snapshot")
 end
