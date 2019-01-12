@@ -57,5 +57,6 @@ task "update_index" do
     end
   end
   s3.bucket('ftp.r-l.o').object("pub/ruby/index.txt").upload_file("index.txt")
+  `curl -X PURGE -H "Fastly-Soft-Purge:1" https://cache.ruby-lang.org/pub/ruby/index.txt`
   FileUtils.rm "index.txt"
 end
