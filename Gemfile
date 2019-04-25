@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-ruby ENV['CUSTOM_RUBY_VERSION'] || '~> 2.5.1'
+ruby ENV['CUSTOM_RUBY_VERSION'] || '~> 2.6.3'
 
 source "https://rubygems.org"
 
