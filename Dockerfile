@@ -9,3 +9,4 @@ ADD . /root/
 WORKDIR /root
 
 RUN bundle install --path=vendor
+RUN git clone https://github.com/ruby/ruby
