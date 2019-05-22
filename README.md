@@ -9,6 +9,16 @@ rake snapshot
 rake snapshot:stable
 ```
 
+# how to test on local environment
+
+`Aws::Sigv4::Errors::MissingCredentialsError` is expected.
+
+```
+docker build -t ruby-snapshot .
+docker run -it -v $(pwd)/pkg:/root/pkg ruby-snapshot bundle exec rake snapshot
+docker run -it -v $(pwd)/pkg:/root/pkg ruby-snapshot bundle exec rake snapshot:stable
+```
+
 # TODO
 
 * Integrate Travis CI for continuously testing with `make-snapshot`
