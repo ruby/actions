@@ -11,6 +11,6 @@ rake snapshot:stable
 
 # TODO
 
-* Integrate Travis CI for continously testing with `make-snapshot`
+* Integrate Travis CI for continuously testing with `make-snapshot`
 * Support version releasing like Ruby 2.6.0 or 2.5.2.
-* Documentaiton :)
+* Documentation :)
