@@ -10,7 +10,7 @@ DIRS = %w(1.0 1.1a 1.1b 1.1c 1.1d 1.2 1.3 1.4 1.6 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.
 
 task :snapshot do
   FileUtils.mkdir "pkg" unless File.directory?("pkg")
-  `cd ruby && git checkout master && git pull origin master`
+  `cd ruby && git checkout master && git pull origin master && git fetch origin refs/notes/commits:refs/notes/commits`
   `ruby ruby/tool/make-snapshot -archname=snapshot -srcdir=ruby pkg`
   upload_s3("snapshot")
   purge_fastly("snapshot")
