@@ -1,0 +1,68 @@
+name: make-snapshot
+
+on:
+  schedule:
+    - cron: '5 1-22/3 * * *'
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential git bison autoconf ruby p7zip-full curl
+      - name: Checkout ruby/ruby
+        run: git clone --single-branch --shallow-since='2018-12-25 00:00:00' https://github.com/ruby/ruby ruby
+      - name: Fetch notes
+        run: cd ruby && git fetch origin +refs/notes/commits:refs/notes/commits
+      - name: Make snapshot
+        run: ruby ruby/tool/make-snapshot -archname=snapshot -srcdir=ruby pkg
+      - name: Check pkg
+        run: |
+          set -x
+          ls -al pkg
+          7z x pkg/snapshot.zip snapshot/revision.h
+          cat snapshot/revision.h
+          7z l pkg/snapshot.zip snapshot/ChangeLog
+      - name: Upload s3
+        run: |
+          set -x
+          for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
+            echo aws s3 cp "pkg/snapshot$ext" "s3://ftp.r-l.o/pub/ruby/snapshot$ext"
+            curl -X PURGE -H "Fastly-Soft-Purge:1" https://cache.ruby-lang.org/pub/ruby/snapshot$ext"
+          done
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+
+  stable-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential git bison autoconf ruby p7zip-full curl
+      - name: Checkout ruby/ruby
+        run: git clone --single-branch --shallow-since='2017-12-25 00:00:00' --branch=ruby_2_6 https://github.com/ruby/ruby ruby
+      - name: Make stable-snapshot
+        run: ruby ruby/tool/make-snapshot -archname=stable-snapshot -srcdir=ruby pkg stable
+      - name: Check pkg
+        run: |
+          set -x
+          ls -al pkg
+          7z x pkg/stable-snapshot.zip stable-snapshot/revision.h
+          cat stable-snapshot/revision.h
+          7z l pkg/stable-snapshot.zip stable-snapshot/ChangeLog
+      - name: Upload s3
+        run: |
+          set -x
+          for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
+            echo aws s3 cp "pkg/stable-snapshot$ext" "s3://ftp.r-l.o/pub/ruby/stable-snapshot$ext"
+            curl -X PURGE -H "Fastly-Soft-Purge:1" https://cache.ruby-lang.org/pub/ruby/stable-snapshot$ext"
+          done
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
