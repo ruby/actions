@@ -45,10 +45,14 @@ jobs:
           set -x
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y build-essential git bison autoconf ruby p7zip-full curl
-      - name: Checkout ruby/ruby
-        run: git clone --single-branch --shallow-since='2017-12-25 00:00:00' --branch=ruby_2_6 https://github.com/ruby/ruby ruby
+      - name: Checkout ruby/ruby for tool/make-snapshot
+        run: git clone --depth=1 https://github.com/ruby/ruby ruby
+      - name: Checkout ruby_2_6
+        run: git clone --single-branch --shallow-since='2017-12-25 00:00:00' --branch=ruby_2_6 https://github.com/ruby/ruby ruby_2_6
+      - name: Fetch notes
+        run: cd ruby_2_6 && git fetch origin +refs/notes/commits:refs/notes/commits
       - name: Make stable-snapshot
-        run: ruby ruby/tool/make-snapshot -archname=stable-snapshot -srcdir=ruby pkg stable
+        run: ruby ruby/tool/make-snapshot -archname=stable-snapshot -srcdir=ruby_2_6 pkg stable
       - name: Check pkg
         run: |
           set -x
