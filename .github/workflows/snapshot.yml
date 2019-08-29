@@ -74,7 +74,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
 
-  2.6-snapshot:
+  ruby_2_6-snapshot:
     runs-on: ubuntu-latest
     steps:
       - name: Install libraries
@@ -108,7 +108,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
 
-  2.5-snapshot:
+  ruby_2_5-snapshot:
     runs-on: ubuntu-latest
     steps:
       - name: Install libraries
@@ -142,7 +142,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
 
-  2.4-snapshot:
+  ruby_2_4-snapshot:
     runs-on: ubuntu-latest
     steps:
       - name: Install libraries
