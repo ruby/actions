@@ -12,6 +12,7 @@ DIRS = %w(1.0 1.1a 1.1b 1.1c 1.1d 1.2 1.3 1.4 1.6 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.
 
 def create_index(bucket)
   cache_dir = Pathname(ENV['XDG_CACHE_HOME'] || "#{ENV['HOME']}/.cache") + 'snapshot'
+  cache_dir.mkpath
   File.open('index.txt', 'w') do |f|
     f.puts "name\turl\tsha1\tsha256\tsha512"
     DIRS.each do |dir|
