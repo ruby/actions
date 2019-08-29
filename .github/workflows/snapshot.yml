@@ -2,7 +2,7 @@ name: make-snapshot
 
 on:
   schedule:
-    - cron: '15 1-22/3 * * *'
+    - cron: '20 * * * *'
 
 jobs:
   snapshot:
