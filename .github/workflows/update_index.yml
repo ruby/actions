@@ -2,7 +2,7 @@ name: update_index
 
 on:
   schedule:
-    - cron: '37 1-22/3 * * *'
+    - cron: '27 1-22/3 * * *'
 
 jobs:
   snapshot:
