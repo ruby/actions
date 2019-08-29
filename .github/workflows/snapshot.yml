@@ -84,12 +84,8 @@ jobs:
           sudo apt-get install --no-install-recommends -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
-      - name: Checkout ruby_2_6
-        run: git clone --single-branch --shallow-since='2017-12-25 00:00:00' --branch=ruby_2_6 https://github.com/ruby/ruby ruby_2_6
-      - name: Fetch notes
-        run: cd ruby_2_6 && git fetch origin +refs/notes/commits:refs/notes/commits
       - name: Make 2.6-snapshot
-        run: ruby ruby/tool/make-snapshot -archname=2.6-snapshot -srcdir=ruby_2_6 pkg stable
+        run: ruby ruby/tool/make-snapshot -archname=2.6-snapshot -svn pkg 2.6
       - name: Check pkg
         run: |
           set -x
@@ -118,12 +114,8 @@ jobs:
           sudo apt-get install --no-install-recommends -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
-      - name: Checkout ruby_2_5
-        run: git clone --single-branch --shallow-since='2016-12-25 00:00:00' --branch=ruby_2_5 https://github.com/ruby/ruby ruby_2_5
-      - name: Fetch notes
-        run: cd ruby_2_5 && git fetch origin +refs/notes/commits:refs/notes/commits
       - name: Make 2.5-snapshot
-        run: ruby ruby/tool/make-snapshot -archname=2.5-snapshot -srcdir=ruby_2_5 pkg stable
+        run: ruby ruby/tool/make-snapshot -archname=2.5-snapshot -svn pkg 2.5
       - name: Check pkg
         run: |
           set -x
@@ -152,12 +144,8 @@ jobs:
           sudo apt-get install --no-install-recommends -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
-      - name: Checkout ruby_2_4
-        run: git clone --single-branch --shallow-since='2015-12-25 00:00:00' --branch=ruby_2_4 https://github.com/ruby/ruby ruby_2_4
-      - name: Fetch notes
-        run: cd ruby_2_4 && git fetch origin +refs/notes/commits:refs/notes/commits
       - name: Make 2.4-snapshot
-        run: ruby ruby/tool/make-snapshot -archname=2.4-snapshot -srcdir=ruby_2_4 pkg stable
+        run: ruby ruby/tool/make-snapshot -archname=2.4-snapshot -svn pkg 2.4
       - name: Check pkg
         run: |
           set -x
