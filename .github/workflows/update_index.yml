@@ -5,7 +5,7 @@ on:
     - cron: '17 1-22/3 * * *'
 
 jobs:
-  snapshot:
+  update_index:
     runs-on: ubuntu-latest
     steps:
       - name: Install libraries
