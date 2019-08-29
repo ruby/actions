@@ -1,0 +1,28 @@
+name: update_index
+
+on:
+  schedule:
+    - cron: '17 1-22/3 * * *'
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ruby
+      - name: Checkout ruby/snapshot
+        run: git clone --depth=1 https://github.com/ruby/snapshot .
+      - name: Bundle install
+        run: |
+          cd tool/snapshot
+          bundle install
+      - name: Update index
+        run: |
+          cd tool/snapshot
+          bundle exec ruby update_index.rb
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
