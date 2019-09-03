@@ -13,8 +13,8 @@ jobs:
           set -x
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y ruby bundler
-      - name: Checkout ruby/snapshot
-        run: git clone --depth=1 https://github.com/ruby/snapshot .
+      - name: Checkout ${{ github.repository }}
+        run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
       - name: Bundle install
         run: |
           cd tool/snapshot
