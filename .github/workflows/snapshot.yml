@@ -33,7 +33,7 @@ jobs:
         run: |
           set -x
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
-            aws s3 cp "pkg/snapshot$ext" "s3://ftp.r-l.o/pub/ruby/snapshot$ext"
+            aws s3 cp "pkg/snapshot$ext" "s3://ftp.r-l.o/pub/ruby/snapshot$ext" --no-progress
             curl -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot$ext"
           done
         env:
@@ -67,7 +67,7 @@ jobs:
         run: |
           set -x
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
-            aws s3 cp "pkg/stable-snapshot$ext" "s3://ftp.r-l.o/pub/ruby/stable-snapshot$ext"
+            aws s3 cp "pkg/stable-snapshot$ext" "s3://ftp.r-l.o/pub/ruby/stable-snapshot$ext" --no-progress
             curl -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/stable-snapshot$ext"
           done
         env:
@@ -99,7 +99,7 @@ jobs:
         run: |
           set -x
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
-            aws s3 cp "pkg/snapshot-master$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-master$ext"
+            aws s3 cp "pkg/snapshot-master$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-master$ext" --no-progress
             curl -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-master$ext"
           done
         env:
@@ -129,7 +129,7 @@ jobs:
         run: |
           set -x
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
-            aws s3 cp "pkg/snapshot-ruby_2_6$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-ruby_2_6$ext"
+            aws s3 cp "pkg/snapshot-ruby_2_6$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-ruby_2_6$ext" --no-progress
             curl -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-ruby_2_6$ext"
           done
         env:
@@ -159,7 +159,7 @@ jobs:
         run: |
           set -x
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
-            aws s3 cp "pkg/snapshot-ruby_2_5$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-ruby_2_5$ext"
+            aws s3 cp "pkg/snapshot-ruby_2_5$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-ruby_2_5$ext" --no-progress
             curl -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-ruby_2_5$ext"
           done
         env:
@@ -189,7 +189,7 @@ jobs:
         run: |
           set -x
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
-            aws s3 cp "pkg/snapshot-ruby_2_4$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-ruby_2_4$ext"
+            aws s3 cp "pkg/snapshot-ruby_2_4$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-ruby_2_4$ext" --no-progress
             curl -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-ruby_2_4$ext"
           done
         env:
