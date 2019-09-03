@@ -73,12 +73,12 @@ jobs:
         run: |
           set -x
           TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          wget https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}.tar.xz
+          curl -sSLO https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}.tar.xz
       - name: Extract
         run: |
           set -x
           TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          tar xf ruby-${TARGET_VERSION}.tar.xz"
+          tar xf ruby-${TARGET_VERSION}.tar.xz
       - name: Fixed world writable dirs
         run: |
           chmod go-w $HOME
