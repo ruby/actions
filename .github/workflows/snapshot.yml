@@ -93,7 +93,7 @@ jobs:
           set -x
           ls -al pkg
           7z x pkg/snapshot-master.zip snapshot-master/revision.h
-          cat snapshot/revision.h
+          cat snapshot-master/revision.h
           7z l pkg/snapshot-master.zip snapshot-master/ChangeLog
       - name: Upload s3
         run: |
