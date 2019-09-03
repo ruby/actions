@@ -11,6 +11,10 @@ jobs:
   snapshot:
     runs-on: ubuntu-latest
     steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
       - name: Install libraries
         run: |
           set -x
@@ -39,7 +43,18 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
-
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
   stable-snapshot:
     runs-on: ubuntu-latest
     steps:
@@ -73,6 +88,18 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
 
   snapshot-master:
     runs-on: ubuntu-latest
@@ -105,6 +132,18 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
 
   snapshot-ruby_2_6:
     runs-on: ubuntu-latest
@@ -135,6 +174,18 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
 
   snapshot-ruby_2_5:
     runs-on: ubuntu-latest
@@ -165,6 +216,18 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
 
   snapshot-ruby_2_4:
     runs-on: ubuntu-latest
@@ -195,6 +258,18 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
 
   check-snapshot-master:
     needs: snapshot-master
@@ -226,6 +301,18 @@ jobs:
         run: cd snapshot-master && sudo make $JOBS install
       - name: ruby -v
         run: ruby -v
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
 
   check-snapshot-ruby_2_6:
     needs: snapshot-ruby_2_6
@@ -257,6 +344,18 @@ jobs:
         run: cd snapshot-ruby_2_6 && sudo make $JOBS install
       - name: ruby -v
         run: ruby -v
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
 
   check-snapshot-ruby_2_5:
     needs: snapshot-ruby_2_5
@@ -288,6 +387,18 @@ jobs:
         run: cd snapshot-ruby_2_5 && sudo make $JOBS install
       - name: ruby -v
         run: ruby -v
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
 
   check-snapshot-ruby_2_4:
     needs: snapshot-ruby_2_4
@@ -319,3 +430,15 @@ jobs:
         run: cd snapshot-ruby_2_4 && sudo make $JOBS install
       - name: ruby -v
         run: ruby -v
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
