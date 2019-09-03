@@ -6,7 +6,7 @@ on:
       - 'draft/v*' # e.g. draft/v2_6_4
 
 jobs:
-  build-draft:
+  build-draft-release:
     runs-on: ubuntu-latest
     steps:
       - run: env | sort
@@ -61,7 +61,7 @@ jobs:
         if: failure()
 
   check-draft-release:
-    needs: build-draft
+    needs: build-draft-release
     runs-on: ubuntu-latest
     steps:
       - name: Install libraries
@@ -73,7 +73,7 @@ jobs:
         run: |
           set -x
           TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}.tar.xz"
+          wget https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}.tar.xz
       - name: Extract
         run: |
           set -x
