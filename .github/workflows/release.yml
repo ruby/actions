@@ -45,7 +45,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Release ${{ github.ref }}",
+                title: "Test Release ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
                 "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
                 "color": "danger"
@@ -59,7 +59,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Release ${{ github.ref }}",
+                title: "Test Release ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
                 "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}>",
                 "color": "good"
