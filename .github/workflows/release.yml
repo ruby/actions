@@ -7,7 +7,6 @@ on:
 
 jobs:
   build:
-    name: Build ${{ github.ref }}
     runs-on: ubuntu-latest
     steps:
       - name: Install libraries
