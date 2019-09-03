@@ -107,7 +107,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
 
   snapshot-branches:
-    name: snapshot-${{ branch }}
+    name: snapshot-${{ matrix.branch }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -121,21 +121,21 @@ jobs:
           sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
-      - name: Make snapshot-${{ branch }}
-        run: ruby ruby/tool/make-snapshot -archname=snapshot-${{ branch }} -svn pkg branches/${{ branch }}
+      - name: Make snapshot-${{ matrix.branch }}
+        run: ruby ruby/tool/make-snapshot -archname=snapshot-${{ matrix.branch }} -svn pkg branches/${{ matrix.branch }}
       - name: Check pkg
         run: |
           set -x
           ls -al pkg
-          7z x pkg/snapshot-${{ branch }}.zip snapshot-${{ branch }}/revision.h
-          cat snapshot-${{ branch }}/revision.h
-          7z l pkg/snapshot-${{ branch }}.zip snapshot-${{ branch }}/ChangeLog
+          7z x pkg/snapshot-${{ matrix.branch }}.zip snapshot-${{ matrix.branch }}/revision.h
+          cat snapshot-${{ matrix.branch }}/revision.h
+          7z l pkg/snapshot-${{ matrix.branch }}.zip snapshot-${{ matrix.branch }}/ChangeLog
       - name: Upload s3
         run: |
           set -x
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
-            aws s3 cp "pkg/snapshot-${{ branch }}$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-${{ branch }}$ext" --no-progress
-            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-${{ branch }}$ext"
+            aws s3 cp "pkg/snapshot-${{ matrix.branch }}$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-${{ matrix.branch }}$ext" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-${{ matrix.branch }}$ext"
           done
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
@@ -173,8 +173,8 @@ jobs:
         run: ruby -v
 
   check-snapshot-branches:
-    name: Check snapshot-${{ branch }}
-    needs: snapshot-${{ branch }}
+    name: Check snapshot-${{ matrix.branch }}
+    needs: snapshot-${{ matrix.branch }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -186,10 +186,10 @@ jobs:
           set -x
           sudo apt-get update -q
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
-      - name: Download snapshot-${{ branch }}.tar.xz
-        run: wget https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-${{ branch }}.tar.xz
+      - name: Download snapshot-${{ matrix.branch }}.tar.xz
+        run: wget https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-${{ matrix.branch }}.tar.xz
       - name: Extract
-        run: tar xf snapshot-${{ branch }}.tar.xz
+        run: tar xf snapshot-${{ matrix.branch }}.tar.xz
       - name: Fixed world writable dirs
         run: |
           chmod go-w $HOME
@@ -198,12 +198,12 @@ jobs:
         run: |
           echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
       - name: configure
-        run: cd snapshot-${{ branch }} && ./configure
+        run: cd snapshot-${{ matrix.branch }} && ./configure
       - name: make
-        run: cd snapshot-${{ branch }} && make $JOBS
+        run: cd snapshot-${{ matrix.branch }} && make $JOBS
       - name: make check
-        run: cd snapshot-${{ branch }} && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        run: cd snapshot-${{ matrix.branch }} && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
       - name: make install
-        run: cd snapshot-${{ branch }} && sudo make $JOBS install
+        run: cd snapshot-${{ matrix.branch }} && sudo make $JOBS install
       - name: ruby -v
         run: ruby -v
