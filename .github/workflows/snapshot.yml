@@ -48,7 +48,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} snapshot>",
                 "color": "danger"
               }]
             }
@@ -93,7 +93,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} stable-snapshot>",
                 "color": "danger"
               }]
             }
@@ -137,7 +137,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} snapshot-master>",
                 "color": "danger"
               }]
             }
@@ -179,7 +179,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} snapshot-ruby_2_6>",
                 "color": "danger"
               }]
             }
@@ -221,7 +221,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} snapshot-ruby_2_5>",
                 "color": "danger"
               }]
             }
@@ -263,7 +263,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} snapshot-ruby_2_4>",
                 "color": "danger"
               }]
             }
@@ -306,7 +306,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-snapshot-master>",
                 "color": "danger"
               }]
             }
@@ -349,7 +349,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-snapshot-ruby_2_6>",
                 "color": "danger"
               }]
             }
@@ -392,7 +392,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-snapshot-ruby_2_5>",
                 "color": "danger"
               }]
             }
@@ -435,7 +435,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-snapshot-ruby_2_4>",
                 "color": "danger"
               }]
             }
