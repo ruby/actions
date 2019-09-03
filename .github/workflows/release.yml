@@ -3,7 +3,7 @@ name: Make release package
 on:
   push:
     tags:
-      - 'testing/v*'
+      - 'testing/v*' # e.g. testing/v2_6_4
 
 jobs:
   build:
