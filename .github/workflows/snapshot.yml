@@ -222,3 +222,7 @@ jobs:
         run: cd snapshot-master && make $JOBS
       - name: make check
         run: cd snapshot-master && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make install
+        run: cd snapshot-master && make $JOBS install
+      - name: ruby -v
+        run: ruby -v
