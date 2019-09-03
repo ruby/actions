@@ -1,4 +1,4 @@
-name: Make test release package of ${{ github.ref }}
+name: Make test release package
 
 on:
   push:
