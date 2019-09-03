@@ -1,9 +1,9 @@
-name: Make test release package
+name: Make draft release package
 
 on:
   push:
     tags:
-      - 'testing/v*' # e.g. testing/v2_6_4
+      - 'draft/v*' # e.g. draft/v2_6_4
 
 jobs:
   build:
@@ -24,12 +24,12 @@ jobs:
       - name: Make pkg
         run: |
           set -x
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/testing/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
           ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
       - name: Check pkg
         run: |
           set -x
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/testing/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
           ls -al pkg
           7z x pkg/ruby-${TARGET_VERSION}.zip ruby-${TARGET_VERSION}/revision.h
           cat ruby-${TARGET_VERSION}/revision.h
@@ -37,7 +37,7 @@ jobs:
       - name: Upload s3
         run: |
           set -x
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/testing/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
             aws s3 cp "pkg/ruby-${TARGET_VERSION}$ext" "s3://ftp.r-l.o/pub/tmp/ruby-${TARGET_VERSION}$ext" --no-progress
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}$ext"
