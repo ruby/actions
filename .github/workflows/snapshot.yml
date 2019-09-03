@@ -195,3 +195,30 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+
+  check-snapshot-master:
+    needs: snapshot-master
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
+      - name: Download snapshot-master.tar.xz
+        run: wget https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-master.tar.xz
+      - name: Extract
+        run: tar xf snapshot-master.tar.xz
+      - name: Fixed world writable dirs
+        run: |
+          chmod go-w $HOME
+          sudo chmod -R go-w /usr/share
+      - name: Set ENV
+        run: |
+          echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
+      - name: configure
+        run: cd snapshot-master && ./configure
+      - name: make
+        run: cd snapshot-master && make $JOBS
+      - name: make check
+        run: cd snapshot-master && make -s $JOBS check
