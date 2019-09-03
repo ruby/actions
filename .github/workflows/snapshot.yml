@@ -14,8 +14,8 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -qq
-          sudo apt-get install --no-install-recommends -qq -y build-essential git bison autoconf ruby p7zip-full curl
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby
         run: git clone --single-branch --shallow-since='2018-12-25 00:00:00' https://github.com/ruby/ruby ruby
       - name: Fetch notes
@@ -46,8 +46,8 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -qq
-          sudo apt-get install --no-install-recommends -qq -y build-essential git bison autoconf ruby p7zip-full curl
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
       - name: Checkout ruby_2_6
@@ -80,8 +80,8 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -qq
-          sudo apt-get install --no-install-recommends -qq -y build-essential git bison autoconf ruby p7zip-full curl
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby
         run: git clone --single-branch --shallow-since='2018-12-25 00:00:00' https://github.com/ruby/ruby ruby
       - name: Fetch notes
@@ -112,8 +112,8 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -qq
-          sudo apt-get install --no-install-recommends -qq -y build-essential git bison autoconf ruby p7zip-full curl
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
       - name: Make snapshot-ruby_2_6
@@ -142,8 +142,8 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -qq
-          sudo apt-get install --no-install-recommends -qq -y build-essential git bison autoconf ruby p7zip-full curl
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
       - name: Make snapshot-ruby_2_5
@@ -172,8 +172,8 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -qq
-          sudo apt-get install --no-install-recommends -qq -y build-essential git bison autoconf ruby p7zip-full curl
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
       - name: Make snapshot-ruby_2_4
@@ -203,8 +203,8 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -qq
-          sudo apt-get install --no-install-recommends -qq -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
       - name: Download snapshot-master.tar.xz
         run: wget https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-master.tar.xz
       - name: Extract
