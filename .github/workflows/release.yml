@@ -6,7 +6,7 @@ on:
       - 'draft/v*' # e.g. draft/v2_6_4
 
 jobs:
-  build:
+  build-draft:
     runs-on: ubuntu-latest
     steps:
       - run: env | sort
@@ -50,9 +50,60 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Test Release ${{ github.ref }}",
+                title: "Draft Release ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
                 "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+
+  check-draft-release:
+    needs: build-draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
+      - name: Download draft
+        run: |
+          set -x
+          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}.tar.xz"
+      - name: Extract
+        run: |
+          set -x
+          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          tar xf ruby-${TARGET_VERSION}.tar.xz"
+      - name: Fixed world writable dirs
+        run: |
+          chmod go-w $HOME
+          sudo chmod -R go-w /usr/share
+      - name: Set ENV
+        run: |
+          echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
+      - name: configure
+        run: cd ruby-* && ./configure
+      - name: make
+        run: cd ruby-* && make $JOBS
+      - name: make check
+        run: cd ruby-* && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make install
+        run: cd ruby-* && sudo make $JOBS install
+      - name: ruby -v
+        run: ruby -v
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                title: "Check Draft Release ${{ github.ref }}",
+                title_link: "https://cache.ruby-lang.org/pub/tmp/",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-draft-release>",
                 "color": "danger"
               }]
             }
@@ -64,9 +115,9 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Test Release ${{ github.ref }}",
+                title: "Check Draft Release ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-draft-release>",
                 "color": "good"
               }]
             }
