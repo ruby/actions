@@ -222,3 +222,6 @@ jobs:
         run: cd snapshot-master && make $JOBS
       - name: make check
         run: cd snapshot-master && make -s $JOBS check
+        env:
+          TESTOPTS: "$JOBS -q --tty=no"
+          MSPECOPT: "-ff" # not using `-j` because sometimes `mspec -j` silently dies
