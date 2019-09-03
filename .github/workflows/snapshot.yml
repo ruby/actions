@@ -226,3 +226,96 @@ jobs:
         run: cd snapshot-master && sudo make $JOBS install
       - name: ruby -v
         run: ruby -v
+
+  check-snapshot-ruby_2_6:
+    needs: snapshot-ruby_2_6
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
+      - name: Download snapshot-ruby_2_6.tar.xz
+        run: wget https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-ruby_2_6.tar.xz
+      - name: Extract
+        run: tar xf snapshot-ruby_2_6.tar.xz
+      - name: Fixed world writable dirs
+        run: |
+          chmod go-w $HOME
+          sudo chmod -R go-w /usr/share
+      - name: Set ENV
+        run: |
+          echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
+      - name: configure
+        run: cd snapshot-ruby_2_6 && ./configure
+      - name: make
+        run: cd snapshot-ruby_2_6 && make $JOBS
+      - name: make check
+        run: cd snapshot-ruby_2_6 && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make install
+        run: cd snapshot-ruby_2_6 && sudo make $JOBS install
+      - name: ruby -v
+        run: ruby -v
+
+  check-snapshot-ruby_2_5:
+    needs: snapshot-ruby_2_5
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
+      - name: Download snapshot-ruby_2_5.tar.xz
+        run: wget https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-ruby_2_5.tar.xz
+      - name: Extract
+        run: tar xf snapshot-ruby_2_5.tar.xz
+      - name: Fixed world writable dirs
+        run: |
+          chmod go-w $HOME
+          sudo chmod -R go-w /usr/share
+      - name: Set ENV
+        run: |
+          echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
+      - name: configure
+        run: cd snapshot-ruby_2_5 && ./configure
+      - name: make
+        run: cd snapshot-ruby_2_5 && make $JOBS
+      - name: make check
+        run: cd snapshot-ruby_2_5 && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make install
+        run: cd snapshot-ruby_2_5 && sudo make $JOBS install
+      - name: ruby -v
+        run: ruby -v
+
+  check-snapshot-ruby_2_4:
+    needs: snapshot-ruby_2_4
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
+      - name: Download snapshot-ruby_2_4.tar.xz
+        run: wget https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-ruby_2_4.tar.xz
+      - name: Extract
+        run: tar xf snapshot-ruby_2_4.tar.xz
+      - name: Fixed world writable dirs
+        run: |
+          chmod go-w $HOME
+          sudo chmod -R go-w /usr/share
+      - name: Set ENV
+        run: |
+          echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
+      - name: configure
+        run: cd snapshot-ruby_2_4 && ./configure
+      - name: make
+        run: cd snapshot-ruby_2_4 && make $JOBS
+      - name: make check
+        run: cd snapshot-ruby_2_4 && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make install
+        run: cd snapshot-ruby_2_4 && sudo make $JOBS install
+      - name: ruby -v
+        run: ruby -v
