@@ -174,7 +174,7 @@ jobs:
 
   check-snapshot-branches:
     name: Check snapshot-${{ matrix.branch }}
-    needs: snapshot-${{ matrix.branch }}
+    needs: snapshot-branches
     runs-on: ubuntu-latest
     strategy:
       matrix:
