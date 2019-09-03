@@ -16,7 +16,7 @@ jobs:
           sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
-      - name: Make pkg ${{ github.ref }}
+      - name: Make pkg
         run: |
           set -x
           TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/testing/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
