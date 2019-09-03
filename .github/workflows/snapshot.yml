@@ -221,4 +221,4 @@ jobs:
       - name: make
         run: cd snapshot-master && make $JOBS
       - name: make check
-        run: cd snapshot-master && make -s $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        run: cd snapshot-master && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
