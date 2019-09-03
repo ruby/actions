@@ -1,4 +1,4 @@
-name: Make release package
+name: Make test release package of ${{ github.ref }}
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    name: Build ${{ github.ref }}
     runs-on: ubuntu-latest
     steps:
       - name: Install libraries
@@ -16,7 +17,7 @@ jobs:
           sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
-      - name: Make pkg
+      - name: Make pkg ${{ github.ref }}
         run: |
           set -x
           TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/testing/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
