@@ -25,7 +25,11 @@ jobs:
         run: |
           set -x
           TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
+          if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<=2 && minor<7)"; then
+            ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
+          else
+            ruby ruby/tool/make-snapshot -git pkg ${TARGET_VERSION}
+          fi
       - name: Check pkg
         run: |
           set -x
