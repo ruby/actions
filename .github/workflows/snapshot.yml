@@ -427,7 +427,7 @@ jobs:
       - name: make test
         run: cd snapshot-ruby_2_4 && make $JOBS test TESTOPTS="-q --tty=no"
       - name: make test-all
-        run: cd snapshot-ruby_2_4 && make $JOBS test-all TESTOPTS="--tty=no --name='!/^test_do_not_allow_invalid_client_cert_auth_connection\z/' --name='!/^test_ioflush2\z/' --name='!/^test_session_reuse\z/' --name='!/^test_session_reuse_but_expire\z/'
+        run: cd snapshot-ruby_2_4 && make $JOBS test-all TESTOPTS="--tty=no --name='!/^test_do_not_allow_invalid_client_cert_auth_connection\z/' --name='!/^test_ioflush2\z/' --name='!/^test_session_reuse\z/' --name='!/^test_session_reuse_but_expire\z/'"
       - name: make install
         run: cd snapshot-ruby_2_4 && sudo make $JOBS install
       - name: ruby -v
