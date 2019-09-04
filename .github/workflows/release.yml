@@ -39,8 +39,8 @@ jobs:
           set -x
           TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/draft/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
-            aws s3 cp "pkg/ruby-${TARGET_VERSION}$ext" "s3://ftp.r-l.o/pub/tmp/ruby-${TARGET_VERSION}$ext" --no-progress
-            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}$ext"
+            aws s3 cp "pkg/ruby-${TARGET_VERSION}$ext" "s3://ftp.r-l.o/pub/tmp/ruby-${TARGET_VERSION}$ext.draft" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}$ext.draft"
           done
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
