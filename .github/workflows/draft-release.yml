@@ -29,7 +29,13 @@ jobs:
           if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<=2 && minor<7)"; then
             ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
           else
-            ruby ruby/tool/make-snapshot -git pkg ${TARGET_VERSION}
+            # e.g. refs/tags/draft/v2_7_0_preview1
+            pushd ruby
+            git fetch --shallow-since='2018-12-25 00:00:00'
+            git fetch origin "+${GITHUB_REF}:${GITHUB_REF}"
+            git fetch origin +refs/notes/commits:refs/notes/commits
+            popd
+            ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
           fi
       - name: Check pkg
         run: |
