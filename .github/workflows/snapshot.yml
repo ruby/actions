@@ -2,10 +2,7 @@ name: make-snapshot
 
 on:
   schedule:
-    - cron: '5 1-22/3 * * *'
-#  push: # for test
-#    branches:
-#      - '*'
+    - cron: '30 12 * * *' # Daily at 12:30 UTC
 
 jobs:
   dump-context:
