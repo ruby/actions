@@ -18,10 +18,6 @@ jobs:
       - name: Checkout ruby/ruby
         run: git clone --depth=1 https://github.com/ruby/ruby .
 
-      - name: Fixed world writable dirs
-        run: |
-          chmod go-w $HOME
-          sudo chmod -R go-w /usr/share
       - run: autoconf
       - run: ./configure
       - run: make Doxyfile
