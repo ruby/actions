@@ -23,12 +23,9 @@ jobs:
           chmod go-w $HOME
           sudo chmod -R go-w /usr/share
       - run: autoconf
-      - name: Configure
-        run: ./configure
-      - name: Generate Doxyfile
-        run: make Doxyfile
-      - name: Run Doxygen
-        run: doxygen
+      - run: ./configure
+      - run: make Doxyfile
+      - run: doxygen
       - name: Upload results
         run: |
           aws s3 sync doc/capi/html/ s3://rubyci/doxygen-latest-html --no-progress
