@@ -16,7 +16,10 @@ jobs:
           sudo apt-get build-dep -q -y ruby2.5
 
       - name: Checkout ruby/ruby
-        run: git clone --depth=1 https://github.com/ruby/ruby .
+        run: |
+          git clone --depth=1 https://github.com/ruby/ruby .
+          git rev-parse HEAD
+          git log
 
       - run: autoconf
       - run: ./configure
