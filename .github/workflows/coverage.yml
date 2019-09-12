@@ -1,0 +1,43 @@
+name: coverage
+on:
+  schedule:
+    - cron: '0 * * * *'
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo sed /etc/apt/sources.list -e "s/^# deb-src/deb-src/g" -i
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y ruby2.5 lcov xz-utils
+          sudo apt-get build-dep -q -y ruby2.5
+
+      - name: Checkout ruby/ruby
+        run: git clone --depth=1 https://github.com/ruby/ruby .
+
+      - name: Fixed world writable dirs
+        run: |
+          chmod go-w $HOME
+          sudo chmod -R go-w /usr/share
+      - run: autoconf
+      - name: Configure with gcov
+        run: ./configure --enable-gcov
+      - name: Setup coverage tools
+        run: make update-coverage
+      - name: Build
+        run: make -j$((1 + $(nproc --all)))
+      - name: Tests
+        run: make -s check COVERAGE=true
+      - name: Aggregate coverage results
+        run: make lcov
+      - name: Upload results
+        run: |
+          xz -9 lcov-all.info
+          RUBY_RUBY_GITHUB_SHA=$(git rev-parse HEAD)
+          aws s3 cp lcov-all.info.xz s3://rubyci/coverage/lcov-all-"$RUBY_RUBY_GITHUB_SHA".info.xz --no-progress
+          aws s3 sync lcov-out s3://rubyci/coverage-latest-html --no-progress
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.RUBYCI_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.RUBYCI_AWS_SECRET_ACCESS_KEY }}
