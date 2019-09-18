@@ -1,26 +1,20 @@
-# ruby-snapshot
+![](https://github.com/ruby/actions/workflows/coverage/badge.svg)
+![](https://github.com/ruby/actions/workflows/doxygen/badge.svg)
+![](https://github.com/ruby/actions/workflows/Make%20draft%20release%20package/badge.svg)
+![](https://github.com/ruby/actions/workflows/make-snapshot/badge.svg)
+![](https://github.com/ruby/actions/workflows/update_index/badge.svg)
 
-This repository is automation tool for ruby packaging workflow.
+# ruby/actions
 
-We use images build by Dockerfile of this repository for building snapshot packages on heroku environment. We are invoking following tasks by heroku scheduler periodically.
+This repository is automation tool for ruby workflows.
 
-```
-rake snapshot
-rake snapshot:stable
-```
+# old ruby-snapshot
 
-# how to test on local environment
+We switched from Heroku to GitHub Actions.
+Some files are not used now.
 
-`Aws::Sigv4::Errors::MissingCredentialsError` is expected.
-
-```
-docker build -t ruby-snapshot .
-docker run -it -v $(pwd)/pkg:/root/pkg ruby-snapshot bundle exec rake snapshot
-docker run -it -v $(pwd)/pkg:/root/pkg ruby-snapshot bundle exec rake snapshot:stable
-```
+See `before-adding-github-workflows` tag for old information.
 
 # TODO
 
-* Integrate Travis CI for continuously testing with `make-snapshot`
-* Support version releasing like Ruby 2.6.0 or 2.5.2.
 * Documentation :)
