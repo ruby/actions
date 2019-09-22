@@ -52,13 +52,13 @@ end
 
 def upload_index(bucket)
   STDERR.puts "Upload pub/ruby/index.txt"
-  #bucket.object("pub/ruby/index.txt").upload_file("index.txt")
+  bucket.object("pub/ruby/index.txt").upload_file("index.txt")
 end
 
 def purge_fastly
   cmd = %W(curl -X PURGE -H Fastly-Soft-Purge:1 https://cache.ruby-lang.org/pub/ruby/index.txt)
   STDERR.puts "Executing #{cmd}"
-  #system(*cmd)
+  system(*cmd)
 end
 
 def update_index
