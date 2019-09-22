@@ -41,6 +41,15 @@ def create_index(bucket)
   end
 end
 
+def diff_index
+  cmd = %W(curl -o index.txt~ https://cache.ruby-lang.org/pub/ruby/index.txt)
+  STDERR.puts "Executing #{cmd}"
+  system(*cmd)
+  cmd = %W(git diff --no-index index.txt~ index.txt)
+  STDERR.puts "Executing #{cmd}"
+  system(*cmd)
+end
+
 def upload_index(bucket)
   STDERR.puts "Upload pub/ruby/index.txt"
   #bucket.object("pub/ruby/index.txt").upload_file("index.txt")
@@ -56,6 +65,7 @@ def update_index
   s3 = Aws::S3::Resource.new(region:'us-east-1')
   bucket = s3.bucket('ftp.r-l.o')
   create_index(bucket)
+  diff_index
   upload_index(bucket)
   purge_fastly
 end
