@@ -318,6 +318,8 @@ jobs:
         run: cd snapshot-* && make $JOBS
       - name: make check
         run: cd snapshot-* && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make install without root privilege
+        run: cd snapshot-* && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install
         run: cd snapshot-* && sudo make $JOBS install
       - name: ruby -v
@@ -361,6 +363,8 @@ jobs:
         run: cd snapshot-* && make $JOBS
       - name: make check
         run: cd snapshot-* && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make install without root privilege
+        run: cd snapshot-* && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install
         run: cd snapshot-* && sudo make $JOBS install
       - name: ruby -v
@@ -404,6 +408,8 @@ jobs:
         run: cd snapshot-* && make $JOBS
       - name: make check
         run: cd snapshot-* && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make install without root privilege
+        run: cd snapshot-* && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install
         run: cd snapshot-* && sudo make $JOBS install
       - name: ruby -v
@@ -447,6 +453,8 @@ jobs:
         run: cd snapshot-* && make $JOBS
       - name: make test
         run: cd snapshot-* && make $JOBS test TESTOPTS="-q --tty=no"
+      - name: make install without root privilege
+        run: cd snapshot-* && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install
         run: cd snapshot-* && sudo make $JOBS install
       - name: ruby -v
