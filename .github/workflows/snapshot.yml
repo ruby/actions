@@ -3,6 +3,7 @@ name: make-snapshot
 on:
   schedule:
     - cron: '30 12 * * *' # Daily at 12:30 UTC
+  repository_dispatch: ~
 
 jobs:
   dump-context:
