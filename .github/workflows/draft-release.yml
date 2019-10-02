@@ -138,6 +138,8 @@ jobs:
         run: cd ruby-*/ && make $JOBS
       - name: make check
         run: cd ruby-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make install without root privilege
+        run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install
         run: cd ruby-*/ && sudo make $JOBS install
         if: always() # `make check` may fail when 2.4.x
