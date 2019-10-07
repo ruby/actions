@@ -49,6 +49,14 @@ jobs:
         run: cd ruby && git fetch origin +refs/notes/commits:refs/notes/commits
       - name: Make snapshot
         run: ruby ruby/tool/make-snapshot -archname=snapshot -srcdir=ruby pkg
+      - uses: actions/upload-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - uses: actions/upload-artifact@master
+        with:
+          name: Info
+          path: pkg/info
       - name: Check pkg
         run: |
           set -x
@@ -94,6 +102,14 @@ jobs:
         run: cd ruby_2_6 && git fetch origin +refs/notes/commits:refs/notes/commits
       - name: Make stable-snapshot
         run: ruby ruby/tool/make-snapshot -archname=stable-snapshot -srcdir=ruby_2_6 pkg stable
+      - uses: actions/upload-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - uses: actions/upload-artifact@master
+        with:
+          name: Info
+          path: pkg/info
       - name: Check pkg
         run: |
           set -x
@@ -138,6 +154,14 @@ jobs:
         run: cd ruby && git fetch origin +refs/notes/commits:refs/notes/commits
       - name: Make snapshot
         run: ruby ruby/tool/make-snapshot -archname=snapshot-master -srcdir=ruby pkg
+      - uses: actions/upload-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - uses: actions/upload-artifact@master
+        with:
+          name: Info
+          path: pkg/info
       - name: Check pkg
         run: |
           set -x
@@ -180,6 +204,14 @@ jobs:
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
       - name: Make snapshot-ruby_2_6
         run: ruby ruby/tool/make-snapshot -archname=snapshot-ruby_2_6 -svn pkg 2.6
+      - uses: actions/upload-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - uses: actions/upload-artifact@master
+        with:
+          name: Info
+          path: pkg/info
       - name: Check pkg
         run: |
           set -x
@@ -222,6 +254,14 @@ jobs:
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
       - name: Make snapshot-ruby_2_5
         run: ruby ruby/tool/make-snapshot -archname=snapshot-ruby_2_5 -svn pkg 2.5
+      - uses: actions/upload-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - uses: actions/upload-artifact@master
+        with:
+          name: Info
+          path: pkg/info
       - name: Check pkg
         run: |
           set -x
@@ -264,6 +304,14 @@ jobs:
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
       - name: Make snapshot-ruby_2_4
         run: ruby ruby/tool/make-snapshot -archname=snapshot-ruby_2_4 -svn pkg 2.4
+      - uses: actions/upload-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - uses: actions/upload-artifact@master
+        with:
+          name: Info
+          path: pkg/info
       - name: Check pkg
         run: |
           set -x

@@ -57,6 +57,14 @@ jobs:
             popd
             ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
           fi
+      - uses: actions/upload-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - uses: actions/upload-artifact@master
+        with:
+          name: Info
+          path: pkg/info
       - name: Check pkg
         run: |
           set -x
