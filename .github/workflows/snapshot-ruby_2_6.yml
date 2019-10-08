@@ -211,9 +211,12 @@ jobs:
         run: tar xf pkg/snapshot-ruby_2_6.tar.xz
       - name: Install libraries
         run: |
-          export WAITS='5 60'
-          tool/travis_retry.sh brew update
-          tool/travis_retry.sh brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
+          with_retry () {
+            "$@" || { sleep 5 && "$@"; } || { sleep 60 && "$@"; }
+          }
+          set -x
+          with_retry brew update
+          with_retry brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
       - name: Set ENV
         run: |
           echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
