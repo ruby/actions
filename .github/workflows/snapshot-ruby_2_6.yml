@@ -4,7 +4,9 @@ on:
   schedule:
     - cron: '30 12 * * *' # Daily at 12:30 UTC
   repository_dispatch:
-    types: "make-snapshot"
+    types:
+      - "make-snapshot"
+      - "snapshot-ruby_2_6"
 
 jobs:
   dump-context:
@@ -90,15 +92,43 @@ jobs:
     needs: snapshot-ruby_2_6
     runs-on: ubuntu-latest
     steps:
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
       - name: Install libraries
         run: |
           set -x
           sudo apt-get update -q
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
-      - name: Download snapshot-ruby_2_6.tar.xz
-        run: wget https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-ruby_2_6.tar.xz
+      - uses: actions/download-artifact@master
+        with:
+          name: Packages
+          path: pkg
       - name: Extract
-        run: tar xf snapshot-ruby_2_6.tar.xz
+        run: tar xf pkg/snapshot-ruby_2_6.tar.xz
       - name: Fixed world writable dirs
         run: |
           chmod go-w $HOME
@@ -112,6 +142,14 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: make check
         run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make test-bundler
+        run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make test-bundled-gems
+        run: cd snapshot-*/ && make test-bundled-gems
+        env:
+          RUBY_TESTOPTS: "-q --tty=no"
+      - name: Leaked Globals
+        run: make -s leaked-globals
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install
@@ -124,6 +162,184 @@ jobs:
             {
               "attachments": [{
                 "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-snapshot-ruby_2_6>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+
+  check-snapshot-ruby_2_6-macos:
+    needs: snapshot-ruby_2_6
+    runs-on: macos-latest
+    steps:
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
+      - name: Disable Firewall
+        run: |
+          sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+          sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
+      - uses: actions/download-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: tar xf pkg/snapshot-ruby_2_6.tar.xz
+      - name: Install libraries
+        run: |
+          export WAITS='5 60'
+          tool/travis_retry.sh brew update
+          tool/travis_retry.sh brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
+      - name: Set ENV
+        run: |
+          echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
+      - name: configure
+        run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
+      - name: make
+        run: cd snapshot-*/ && make $JOBS
+      - name: make check
+        run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make test-bundler
+        run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make test-bundled-gems
+        run: cd snapshot-*/ && make test-bundled-gems
+        env:
+          RUBY_TESTOPTS: "-q --tty=no"
+      - name: Leaked Globals
+        run: make -s leaked-globals
+      - name: make install without root privilege
+        run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
+      - name: make install
+        run: cd snapshot-*/ && sudo make $JOBS install
+      - name: ruby -v
+        run: ruby -v
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-snapshot-ruby_2_6-macos>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+
+  check-snapshot-ruby_2_6-windows:
+    needs: snapshot-ruby_2_6
+    strategy:
+      matrix:
+        os: [windows-2016, windows-2019]
+        vs: [2017, 2019]
+        test_task: [test]
+        exclude:
+          - os: windows-2016
+            vs: 2019
+          - os: windows-2019
+            vs: 2017
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
+      - name: Install libraries with vcpkg
+        run: |
+          vcpkg --triplet x64-windows install %dependencies% || (
+            sleep 4 && vcpkg --triplet x64-windows install %dependencies%
+          ) || (
+            sleep 25 && vcpkg --triplet x64-windows install %dependencies%
+          )
+        env:
+          dependencies: openssl readline zlib
+      - name: Install libraries with chocolatey
+        run: |
+          choco install winflexbison3 || (
+            sleep 4 && choco install winflexbison3
+          ) || (
+            sleep 25 && choco install winflexbison3
+          )
+      - uses: actions/download-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: 7z pkg/snapshot-ruby_2_6.zip
+      - name: configure
+        run: |
+          cd snapshot-ruby_2_6
+          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          win32/configure.bat --disable-install-doc --without-ext=+,dbm,gdbm --enable-bundled-libffi --with-opt-dir=C:/vcpkg/installed/x64-windows
+      - name: nmake
+        run: |
+          cd snapshot-ruby_2_6
+          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          set YACC=win_bison
+          nmake up
+          nmake
+      - name: nmake test
+        run: |
+          cd snapshot-ruby_2_6
+          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          nmake ${{ matrix.test_task }}
+      - name: ruby -v
+        run: |
+          cd snapshot-ruby_2_6
+          ruby -v
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-snapshot-ruby_2_6-windows>",
                 "color": "danger"
               }]
             }
