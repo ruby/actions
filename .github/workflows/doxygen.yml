@@ -1,7 +1,7 @@
 name: doxygen
 on:
   schedule:
-    - cron: '30 13 * * *' # Daily at 13:30 UTC
+    - cron: '30 2,5,8,11,14,17,20,23 * * *' # Every three hours
 
 jobs:
   latest:
