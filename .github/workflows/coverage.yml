@@ -16,7 +16,8 @@ jobs:
 
       - name: Checkout ruby/ruby
         run: |
-          git clone --depth=1 https://github.com/ruby/ruby .
+          git clone --depth=1 https://github.com/ruby/ruby
+          cd ruby
           git rev-parse HEAD
           git log
 
@@ -24,19 +25,21 @@ jobs:
         run: |
           chmod go-w $HOME
           sudo chmod -R go-w /usr/share
-      - run: autoconf
+      - run: cd ruby && autoconf
       - name: Configure with gcov
-        run: ./configure --enable-gcov
+        run: cd ruby && ./configure --enable-gcov
       - name: Setup coverage tools
-        run: make update-coverage
+        run: cd ruby && make update-coverage
       - name: Build
-        run: make -j$((1 + $(nproc --all)))
+        run: cd ruby && make -j$((1 + $(nproc --all)))
       - name: Tests
-        run: make -s check COVERAGE=true
+        run: cd ruby && make -s check COVERAGE=true
       - name: Aggregate coverage results
-        run: make lcov
+        run: cd ruby && make lcov
       - name: Upload results
         run: |
+          set -x
+          cd ruby
           xz -9 lcov-all.info
           RUBY_RUBY_GITHUB_SHA=$(git rev-parse HEAD)
           aws s3 cp lcov-all.info.xz s3://rubyci/coverage/lcov-all-"$RUBY_RUBY_GITHUB_SHA".info.xz --no-progress
