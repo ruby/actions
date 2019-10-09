@@ -39,6 +39,7 @@ jobs:
         run: cd ruby && make -s check COVERAGE=true
       - name: Aggregate coverage results
         run: cd ruby && make lcov
+      - run: ls -l ruby
       - uses: actions/upload-artifact@master
         with:
           name: coverage-latest-html
