@@ -25,6 +25,10 @@ jobs:
       - run: ./configure
       - run: make Doxyfile
       - run: doxygen
+      - uses: actions/upload-artifact@master
+        with:
+          name: doxygen-latest-html
+          path: doc/capi/html
       - name: Upload results
         run: |
           aws s3 sync doc/capi/html/ s3://rubyci/doxygen-latest-html --no-progress
