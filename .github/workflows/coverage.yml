@@ -43,7 +43,7 @@ jobs:
       - uses: actions/upload-artifact@master
         with:
           name: coverage-latest-html
-          path: ruby/coverage-latest-html
+          path: ruby/lcov-out
       - uses: actions/upload-artifact@master
         with:
           name: lcov-all.info
