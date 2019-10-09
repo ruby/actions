@@ -72,6 +72,10 @@ jobs:
             aws s3 cp "pkg/snapshot-ruby_2_6$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-ruby_2_6$ext" --no-progress
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-ruby_2_6$ext"
           done
+          for ext in .json .yaml; do
+            aws s3 cp "pkg/info/info$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/snapshot-ruby_2_6$ext" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/snapshot-ruby_2_6$ext"
+          done
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
