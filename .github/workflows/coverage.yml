@@ -2,6 +2,9 @@ name: coverage
 on:
   schedule:
     - cron: '0 2,5,8,11,14,17,20,23 * * *' # Every three hours
+  repository_dispatch:
+    types: "coverage"
+
 jobs:
   latest:
     runs-on: ubuntu-latest
