@@ -164,7 +164,7 @@ jobs:
           name: Packages
           path: pkg
       - name: Extract
-        run: tar xf pkg/ruby-*-draft.tar.xz
+        run: tar xf pkg/ruby-*.tar.xz
       - name: Fixed world writable dirs
         run: |
           chmod go-w $HOME
@@ -252,7 +252,7 @@ jobs:
           name: Packages
           path: pkg
       - name: Extract
-        run: tar xf pkg/ruby-*-draft.tar.xz
+        run: tar xf pkg/ruby-*.tar.xz
       - name: Install libraries
         run: |
           with_retry () {
@@ -380,7 +380,7 @@ jobs:
           name: Packages
           path: pkg
       - name: Extract
-        run: 7z x pkg/ruby-*-draft.zip
+        run: 7z x pkg/ruby-*.zip
       - name: configure
         run: |
           cd ruby-*
