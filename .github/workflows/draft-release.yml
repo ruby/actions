@@ -100,7 +100,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Build Draft Release ${{ github.ref }}${{ github.event.action }}",
+                title: "Build Draft Release ${{ github.event.action }} ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
                 "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
                 "color": "danger"
@@ -114,7 +114,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Build Draft Release ${{ github.ref }}${{ github.event.action }}",
+                title: "Build Draft Release ${{ github.event.action }} ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
                 "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-draft-release>",
                 "color": "good"
@@ -169,7 +169,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check Draft Release ${{ github.ref }}${{ github.event.action }}",
+                title: "Check Draft Release ${{ github.event.action }} ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
                 "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-draft-release>",
                 "color": "danger"
@@ -183,7 +183,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check Draft Release ${{ github.ref }}${{ github.event.action }}",
+                title: "Check Draft Release ${{ github.event.action }} ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
                 "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-draft-release>",
                 "color": "good"
