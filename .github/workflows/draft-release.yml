@@ -179,10 +179,16 @@ jobs:
       - name: make check
         run: cd ruby-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
       - name: make test-bundler
-        run: cd ruby-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        run: |
+          set -ex
+          cd ruby-*/
+          make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff" || :
         if: always() # `make check` may fail when 2.4.x
       - name: make test-bundled-gems
-        run: cd ruby-*/ && make test-bundled-gems
+        run: |
+          set -ex
+          cd ruby-*/
+          make test-bundled-gems || :
         env:
           RUBY_TESTOPTS: "-q --tty=no"
         if: always() # `make check` may fail when 2.4.x
@@ -281,10 +287,16 @@ jobs:
         run: cd ruby-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
         if: always()
       - name: make test-bundler
-        run: cd ruby-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        run: |
+          set -ex
+          cd ruby-*/
+          make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff" || :
         if: always()
       - name: make test-bundled-gems
-        run: cd ruby-*/ && make test-bundled-gems
+        run: |
+          set -ex
+          cd ruby-*/
+          make test-bundled-gems || :
         env:
           RUBY_TESTOPTS: "-q --tty=no"
         if: always()
