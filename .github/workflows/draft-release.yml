@@ -279,9 +279,6 @@ jobs:
         env:
           RUBY_TESTOPTS: "-q --tty=no"
         if: always()
-      - name: Leaked Globals
-        run: make -s leaked-globals
-        if: always()
       - name: make install without root privilege
         run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: always()
