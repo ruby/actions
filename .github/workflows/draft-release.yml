@@ -178,8 +178,17 @@ jobs:
         run: cd ruby-*/ && make $JOBS
       - name: make check
         run: cd ruby-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-      - name: make install without root privilege
+       - name: make test-bundler
+        run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        if: always() # `make check` may fail when 2.4.x
+      - name: make test-bundled-gems
+        run: cd snapshot-*/ && make test-bundled-gems
+        env:
+          RUBY_TESTOPTS: "-q --tty=no"
+        if: always() # `make check` may fail when 2.4.x
+     - name: make install without root privilege
         run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
+        if: always() # `make check` may fail when 2.4.x
       - name: make install
         run: cd ruby-*/ && sudo make $JOBS install
         if: always() # `make check` may fail when 2.4.x
