@@ -9,7 +9,7 @@ on:
       - "refs/tags/v*" # e.g. refs/tags/v2_6_4
 
 jobs:
-  build-draft-release:
+  make-snapshot:
     runs-on: ubuntu-latest
     steps:
       - run: env | sort
@@ -124,25 +124,47 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
         if: success()
 
-  check-draft-release:
-    needs: build-draft-release
+  check-on-ubuntu:
+    needs: make-snapshot
     runs-on: ubuntu-latest
     steps:
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
       - name: Install libraries
         run: |
           set -x
           sudo apt-get update -q
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
-      - name: Download draft
-        run: |
-          set -x
-          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          curl -sSLO https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}-draft.tar.xz
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+      - uses: actions/download-artifact@master
+        with:
+          name: Packages
+          path: pkg
       - name: Extract
-        run: tar xf ruby-*-draft.tar.xz
+        run: tar xf pkg/ruby-*-draft.tar.xz
       - name: Fixed world writable dirs
         run: |
           chmod go-w $HOME
@@ -169,9 +191,8 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check Draft Release ${{ github.event.action }} ${{ github.ref }}",
-                title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-draft-release>",
+                title: "Check on ubuntu ${{ github.event.action }} ${{ github.ref }}",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-on-ubuntu>",
                 "color": "danger"
               }]
             }
@@ -183,9 +204,224 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check Draft Release ${{ github.event.action }} ${{ github.ref }}",
-                title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-draft-release>",
+                title: "Check on ubuntu ${{ github.event.action }} ${{ github.ref }}",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-on-ubuntu>",
+                "color": "good"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: success()
+
+  check-on-macos:
+    needs: make-snapshot
+    runs-on: macos-latest
+    steps:
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
+      - name: Disable Firewall
+        run: |
+          sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+          sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
+      - uses: actions/download-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: tar xf pkg/ruby-*-draft.tar.xz
+      - name: Install libraries
+        run: |
+          with_retry () {
+            "$@" || { sleep 5 && "$@"; } || { sleep 60 && "$@"; }
+          }
+          set -x
+          with_retry brew update
+          with_retry brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
+      - name: Set ENV
+        run: |
+          echo '##[set-env name=JOBS]'-j$((1 + $(sysctl -n hw.activecpu)))
+      - name: configure
+        run: cd ruby-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
+      - name: make
+        run: cd ruby-*/ && make $JOBS
+      - name: make check
+        run: cd ruby-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        if: always()
+      - name: make test-bundler
+        run: cd ruby-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        if: always()
+      - name: make test-bundled-gems
+        run: cd ruby-*/ && make test-bundled-gems
+        env:
+          RUBY_TESTOPTS: "-q --tty=no"
+        if: always()
+      - name: Leaked Globals
+        run: make -s leaked-globals
+        if: always()
+      - name: make install without root privilege
+        run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
+        if: always()
+      - name: make install
+        run: cd ruby-*/ && sudo make $JOBS install
+        if: always()
+      - name: ruby -v
+        run: ruby -v
+        if: always()
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                title: "Check on macos ${{ github.event.action }} ${{ github.ref }}",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-on-macos>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                title: "Check on macos ${{ github.event.action }} ${{ github.ref }}",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-on-macos>",
+                "color": "good"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: success()
+
+  check-on-windows:
+    needs: make-snapshot
+    strategy:
+      matrix:
+        os: [windows-2016, windows-2019]
+        vs: [2017, 2019]
+        test_task: [test]
+        exclude:
+          - os: windows-2016
+            vs: 2019
+          - os: windows-2019
+            vs: 2017
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
+      - name: Install libraries with vcpkg
+        run: |
+          vcpkg --triplet x64-windows install %dependencies% || (
+            sleep 4 && vcpkg --triplet x64-windows install %dependencies%
+          ) || (
+            sleep 25 && vcpkg --triplet x64-windows install %dependencies%
+          )
+        env:
+          dependencies: openssl readline zlib
+      - name: Install libraries with chocolatey
+        run: |
+          choco install winflexbison3 || (
+            sleep 4 && choco install winflexbison3
+          ) || (
+            sleep 25 && choco install winflexbison3
+          )
+      - uses: actions/download-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: 7z x pkg/ruby-*-draft.zip
+      - name: configure
+        run: |
+          cd ruby-*
+          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          win32/configure.bat --disable-install-doc --without-ext=+,dbm,gdbm --enable-bundled-libffi --with-opt-dir=C:/vcpkg/installed/x64-windows
+      - name: nmake
+        run: |
+          cd ruby-*
+          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          set YACC=win_bison
+          nmake up
+          nmake
+      - name: nmake test
+        run: |
+          cd ruby-*
+          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          nmake ${{ matrix.test_task }}
+      - name: ruby -v
+        run: |
+          cd ruby-*
+          ruby -v
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                title: "Check on windows ${{ github.event.action }} ${{ github.ref }}",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-on-windows>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                title: "Check on windows ${{ github.event.action }} ${{ github.ref }}",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-on-windows>",
                 "color": "good"
               }]
             }
