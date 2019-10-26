@@ -94,7 +94,10 @@ jobs:
 
   ubuntu:
     needs: make-snapshot
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-16.04]
+    runs-on: ${{ matrix.os }}
     steps:
       - run: env | sort
       - name: Dump GitHub context
