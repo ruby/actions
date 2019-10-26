@@ -76,6 +76,10 @@ jobs:
             aws s3 cp "pkg/$archname$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/$archname$ext" --no-progress
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/$archname$ext"
           done
+          for ext in .json .yml; do
+            aws s3 cp "pkg/info/info$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/$archname$ext" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/$archname$ext"
+          done
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
@@ -84,7 +88,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} $archname>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} make-snapshot>",
                 "color": "danger"
               }]
             }
@@ -175,7 +179,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ubuntu>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }}>",
                 "color": "danger"
               }]
             }
@@ -185,7 +189,11 @@ jobs:
 
   macos:
     needs: make-snapshot
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        os: [macos-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     steps:
       - run: env | sort
       - name: Dump GitHub context
@@ -265,7 +273,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} macos>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }}>",
                 "color": "danger"
               }]
             }
@@ -355,7 +363,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} windows>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }}>",
                 "color": "danger"
               }]
             }

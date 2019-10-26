@@ -50,7 +50,7 @@ jobs:
           sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
-      - name: Make snapshot-ruby_2_6
+      - name: Make snapshot
         run: ruby ruby/tool/make-snapshot -archname=$archname -svn pkg 2.6
       - uses: actions/upload-artifact@master
         with:
@@ -96,7 +96,11 @@ jobs:
 
   ubuntu:
     needs: make-snapshot
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-16.04]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     steps:
       - run: env | sort
       - name: Dump GitHub context
@@ -128,7 +132,7 @@ jobs:
         run: |
           set -x
           sudo apt-get update -q
-          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm5 libgdbm-dev bison- autoconf- ruby- git-
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- ruby- git-
       - uses: actions/download-artifact@master
         with:
           name: Packages
@@ -173,7 +177,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ubuntu>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }}>",
                 "color": "danger"
               }]
             }
@@ -183,7 +187,11 @@ jobs:
 
   macos:
     needs: make-snapshot
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        os: [macos-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     steps:
       - run: env | sort
       - name: Dump GitHub context
@@ -263,7 +271,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} macos>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }}>",
                 "color": "danger"
               }]
             }
@@ -353,7 +361,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} windows>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }}>",
                 "color": "danger"
               }]
             }
