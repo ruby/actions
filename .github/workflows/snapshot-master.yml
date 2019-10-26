@@ -97,6 +97,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, ubuntu-16.04]
+      fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
       - run: env | sort
