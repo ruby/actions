@@ -131,7 +131,6 @@ jobs:
           set -x
           sudo apt-get update -q
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- ruby- git-
-          sudo apt-get install --no-install-recommends -q -y libgdbm5 || sudo apt-get install --no-install-recommends -q -y libgdbm3
       - uses: actions/download-artifact@master
         with:
           name: Packages
