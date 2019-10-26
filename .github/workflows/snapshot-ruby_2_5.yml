@@ -166,10 +166,8 @@ jobs:
         continue-on-error: true
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
-        continue-on-error: true
       - name: make install
         run: cd snapshot-*/ && sudo make $JOBS install
-        continue-on-error: true
       - name: ruby -v
         run: ruby -v
       - uses: k0kubun/action-slack@v2.0.0
@@ -260,10 +258,8 @@ jobs:
         continue-on-error: true
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
-        continue-on-error: true
       - name: make install
         run: cd snapshot-*/ && sudo make $JOBS install
-        continue-on-error: true
       - name: ruby -v
         run: /usr/local/bin/ruby -v
       - uses: k0kubun/action-slack@v2.0.0
