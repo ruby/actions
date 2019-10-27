@@ -57,7 +57,7 @@ jobs:
               "attachments": [{
                 title: "${{ github.event.action }} ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} remove-draft-release>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }
@@ -71,7 +71,7 @@ jobs:
               "attachments": [{
                 title: "${{ github.event.action }} ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} remove-draft-release>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}>",
                 "color": "good"
               }]
             }
