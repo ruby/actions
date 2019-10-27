@@ -152,24 +152,26 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: make check
         run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        continue-on-error: true
       - name: make test-bundler
         run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        continue-on-error: true
+        if: always()
       - name: make test-bundled-gems
         run: cd snapshot-*/ && make test-bundled-gems
         env:
           RUBY_TESTOPTS: "-q --tty=no"
-        continue-on-error: true
+        if: always()
       - name: Leaked Globals
         run: make -s leaked-globals
-        continue-on-error: true
+        if: always()
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
+        if: always()
       - name: make install
         run: cd snapshot-*/ && sudo make $JOBS install
+        if: always()
       - name: ruby -v
         run: ruby -v
+        if: always()
       - uses: k0kubun/action-slack@v2.0.0
         with:
           payload: |
@@ -244,24 +246,27 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: make check
         run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        continue-on-error: true
+        if: always()
       - name: make test-bundler
         run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        continue-on-error: true
+        if: always()
       - name: make test-bundled-gems
         run: cd snapshot-*/ && make test-bundled-gems
         env:
           RUBY_TESTOPTS: "-q --tty=no"
-        continue-on-error: true
+        if: always()
       - name: Leaked Globals
         run: make -s leaked-globals
-        continue-on-error: true
+        if: always()
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
+        if: always()
       - name: make install
         run: cd snapshot-*/ && sudo make $JOBS install
+        if: always()
       - name: ruby -v
         run: /usr/local/bin/ruby -v
+        if: always()
       - uses: k0kubun/action-slack@v2.0.0
         with:
           payload: |
