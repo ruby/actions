@@ -1,0 +1,80 @@
+name: Remove pub/tmp/ruby-*
+
+on:
+  repository_dispatch:
+    types:
+      - "Remove pub/tmp/ruby-*"
+
+jobs:
+  dump-context:
+    runs-on: ubuntu-latest
+    steps:
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
+  make-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove from s3
+        run: |
+          set -x
+          TARGET_VERSION=${GITHUB_EVENT_ACTION#Remove pub/tmp/ruby-}
+          for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
+            aws s3 rm "s3://ftp.r-l.o/pub/tmp/ruby-${TARGET_VERSION}$ext"
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}$ext"
+          done
+        env:
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                title: "${{ github.event.action }} ${{ github.ref }}",
+                title_link: "https://cache.ruby-lang.org/pub/tmp/",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} remove-draft-release>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                title: "${{ github.event.action }} ${{ github.ref }}",
+                title_link: "https://cache.ruby-lang.org/pub/tmp/",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} remove-draft-release>",
+                "color": "good"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: success()
