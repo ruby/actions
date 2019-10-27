@@ -35,7 +35,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-  make-snapshot:
+  remove:
     runs-on: ubuntu-latest
     steps:
       - name: Remove from s3
