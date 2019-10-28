@@ -99,6 +99,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, ubuntu-16.04]
+        test_task: [check, test-bundler, test-bundled-gems]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -132,7 +133,21 @@ jobs:
         run: |
           set -x
           sudo apt-get update -q
-          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- ruby- git-
+          UNINSTALL_RUBY=ruby-
+          UNINSTALL_GIT=git-
+          case "$MATRIX_TEST_TASK" in
+            test-bundled-gems)
+              # test-bundled-gems requires executable host ruby
+              unset UNINSTALL_RUBY
+              ;;
+            test-bundler)
+              # avoid Bundler::Source::Git::GitNotInstalledError
+              unset UNINSTALL_GIT
+              ;;
+            *)
+              ;;
+          esac
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $UNINSTALL_RUBY $UNINSTALL_GIT
       - uses: actions/download-artifact@master
         with:
           name: Packages
@@ -151,24 +166,28 @@ jobs:
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: make check
-        run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-      - name: make test-bundler
-        run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        if: always()
-      - name: make test-bundled-gems
-        run: cd snapshot-*/ && make test-bundled-gems
+        run: |
+          set -x
+          cd snapshot-*/
+          case "$MATRIX_TEST_TASK" in
+            test-bundled-gems)
+              env RUBY_TESTOPTS="-q --tty=no" make test-bundled-gems
+              ;;
+            *)
+              make $JOBS "$MATRIX_TEST_TASK" TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+              ;;
+          esac
         env:
-          RUBY_TESTOPTS: "-q --tty=no"
-        if: always()
+          MATRIX_TEST_TASK: ${{ matrix.test_task }}
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
-        if: always()
+        if: matrix.test_task == 'check'
       - name: make install
         run: cd snapshot-*/ && sudo make $JOBS install
-        if: always()
+        if: matrix.test_task == 'check'
       - name: ruby -v
         run: ruby -v
-        if: always()
+        if: matrix.test_task == 'check'
       - uses: k0kubun/action-slack@v2.0.0
         with:
           payload: |
