@@ -160,9 +160,6 @@ jobs:
         env:
           RUBY_TESTOPTS: "-q --tty=no"
         if: always()
-      - name: Leaked Globals
-        run: make -s leaked-globals
-        if: always()
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: always()
@@ -254,9 +251,6 @@ jobs:
         run: cd snapshot-*/ && make test-bundled-gems
         env:
           RUBY_TESTOPTS: "-q --tty=no"
-        if: always()
-      - name: Leaked Globals
-        run: make -s leaked-globals
         if: always()
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
