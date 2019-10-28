@@ -141,21 +141,21 @@ jobs:
         run: |
           set -x
           sudo apt-get update -q
-          UNINSTALL_RUBY=ruby-
-          UNINSTALL_GIT=git-
+          APT_INSTALL_RUBY=ruby-
+          APT_INSTALL_GIT=git-
           case "$MATRIX_TEST_TASK" in
             test-bundled-gems)
               # test-bundled-gems requires executable host ruby
-              unset UNINSTALL_RUBY
+              APT_INSTALL_RUBY=ruby
               ;;
             test-bundler)
               # avoid Bundler::Source::Git::GitNotInstalledError
-              unset UNINSTALL_GIT
+              unset APT_INSTALL_GIT
               ;;
             *)
               ;;
           esac
-          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $UNINSTALL_RUBY $UNINSTALL_GIT
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
       - name: Fixed world writable dirs
         run: |
           chmod go-w $HOME
