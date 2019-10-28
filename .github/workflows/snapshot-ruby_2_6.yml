@@ -139,7 +139,7 @@ jobs:
         run: |
           set -x
           cd snapshot-*/
-          rm -rf spec/ruby
+          rm -rf spec/mspec spec/ruby
           git clone --depth=1 https://github.com/ruby/mspec spec/mspec
           git clone --depth=1 https://github.com/ruby/spec spec/ruby
         if: matrix.test_task == 'check'
@@ -269,7 +269,7 @@ jobs:
         run: |
           set -x
           cd snapshot-*/
-          rm -rf spec/ruby
+          rm -rf spec/mspec spec/ruby
           git clone --depth=1 https://github.com/ruby/mspec spec/mspec
           git clone --depth=1 https://github.com/ruby/spec spec/ruby
           make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
