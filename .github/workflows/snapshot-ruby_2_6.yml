@@ -129,13 +129,27 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
+      - uses: actions/download-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: tar xf pkg/*.tar.xz
+      - name: Update spec
+        run: |
+          set -x
+          cd snapshot-*/
+          rm -rf spec/ruby
+          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
+          git clone --depth=1 https://github.com/ruby/spec spec/ruby
+        if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
           set -x
           sudo apt-get update -q
           UNINSTALL_RUBY=ruby-
           UNINSTALL_GIT=git-
-          case "$MATRIX_TEST_TASK" in
+          case "${{ matrix.test_task }}" in
             test-bundled-gems)
               # test-bundled-gems requires executable host ruby
               unset UNINSTALL_RUBY
@@ -148,12 +162,6 @@ jobs:
               ;;
           esac
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $UNINSTALL_RUBY $UNINSTALL_GIT
-      - uses: actions/download-artifact@master
-        with:
-          name: Packages
-          path: pkg
-      - name: Extract
-        run: tar xf pkg/*.tar.xz
       - name: Fixed world writable dirs
         run: |
           chmod go-w $HOME
@@ -166,13 +174,7 @@ jobs:
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: make check
-        run: |
-          set -x
-          cd snapshot-*/
-          rm -rf spec/ruby
-          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
-          git clone --depth=1 https://github.com/ruby/spec spec/ruby
-          make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
         if: matrix.test_task == 'check'
       - name: make test-bundler
         run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"

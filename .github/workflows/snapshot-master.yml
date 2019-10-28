@@ -131,6 +131,12 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
+      - uses: actions/download-artifact@master
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: tar xf pkg/*.tar.xz
       - name: Install libraries
         run: |
           set -x
@@ -150,12 +156,6 @@ jobs:
               ;;
           esac
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $UNINSTALL_RUBY $UNINSTALL_GIT
-      - uses: actions/download-artifact@master
-        with:
-          name: Packages
-          path: pkg
-      - name: Extract
-        run: tar xf pkg/*.tar.xz
       - name: Fixed world writable dirs
         run: |
           chmod go-w $HOME
@@ -168,19 +168,16 @@ jobs:
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: make check
-        run: |
-          set -x
-          cd snapshot-*/
-          case "$MATRIX_TEST_TASK" in
-            test-bundled-gems)
-              env RUBY_TESTOPTS="-q --tty=no" make test-bundled-gems
-              ;;
-            *)
-              make $JOBS "$MATRIX_TEST_TASK" TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-              ;;
-          esac
+        run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        if: matrix.test_task == 'check'
+      - name: make test-bundler
+        run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        if: matrix.test_task == 'test-bundler'
+      - name: make test-bundled-gems
+        run: cd snapshot-*/ && make test-bundled-gems
         env:
-          MATRIX_TEST_TASK: ${{ matrix.test_task }}
+          RUBY_TESTOPTS: "-q --tty=no"
+        if: matrix.test_task == 'test-bundled-gems'
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
         if: matrix.test_task == 'check'

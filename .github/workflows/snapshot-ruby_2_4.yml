@@ -129,17 +129,17 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - name: Install libraries
-        run: |
-          set -x
-          sudo apt-get update -q
-          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- ruby- git-
       - uses: actions/download-artifact@master
         with:
           name: Packages
           path: pkg
       - name: Extract
         run: tar xf pkg/*.tar.xz
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- ruby- git-
       - name: Fixed world writable dirs
         run: |
           chmod go-w $HOME
