@@ -99,7 +99,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, ubuntu-16.04]
-        test_task: [check, test-bundler, test-bundled-gems]
+        test_task: [check, test-bundled-gems]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -176,9 +176,6 @@ jobs:
       - name: make check
         run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
         if: matrix.test_task == 'check'
-      - name: make test-bundler
-        run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        if: matrix.test_task == 'test-bundler'
       - name: make test-bundled-gems
         run: cd snapshot-*/ && make test-bundled-gems
         env:
@@ -273,9 +270,6 @@ jobs:
           git clone --depth=1 https://github.com/ruby/mspec spec/mspec
           git clone --depth=1 https://github.com/ruby/spec spec/ruby
           make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        if: always()
-      - name: make test-bundler
-        run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
         if: always()
       - name: make test-bundled-gems
         run: cd snapshot-*/ && make test-bundled-gems
