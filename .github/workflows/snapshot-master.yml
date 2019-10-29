@@ -143,7 +143,7 @@ jobs:
           sudo apt-get update -q
           APT_INSTALL_RUBY=ruby-
           APT_INSTALL_GIT=git-
-          case "$MATRIX_TEST_TASK" in
+          case "${{ matrix.test_task }}" in
             test-bundled-gems)
               # test-bundled-gems requires executable host ruby
               APT_INSTALL_RUBY=ruby
