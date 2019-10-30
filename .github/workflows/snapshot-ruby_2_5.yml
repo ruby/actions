@@ -181,6 +181,7 @@ jobs:
         env:
           RUBY_TESTOPTS: "-q --tty=no"
         if: matrix.test_task == 'test-bundled-gems'
+        continue-on-error: true
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: matrix.test_task == 'check'
@@ -276,6 +277,7 @@ jobs:
         env:
           RUBY_TESTOPTS: "-q --tty=no"
         if: always()
+        continue-on-error: true
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: always()

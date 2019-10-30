@@ -173,11 +173,13 @@ jobs:
       - name: make test-bundler
         run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
         if: matrix.test_task == 'test-bundler'
+        continue-on-error: true
       - name: make test-bundled-gems
         run: cd snapshot-*/ && make test-bundled-gems
         env:
           RUBY_TESTOPTS: "-q --tty=no"
         if: matrix.test_task == 'test-bundled-gems'
+        continue-on-error: true
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
         if: matrix.test_task == 'check'
@@ -268,11 +270,13 @@ jobs:
       - name: make test-bundler
         run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
         if: always()
+        continue-on-error: true
       - name: make test-bundled-gems
         run: cd snapshot-*/ && make test-bundled-gems
         env:
           RUBY_TESTOPTS: "-q --tty=no"
         if: always()
+        continue-on-error: true
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
         if: always()
