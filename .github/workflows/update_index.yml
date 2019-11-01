@@ -25,10 +25,12 @@ jobs:
           key: ${{ runner.os }}-pkg-and-gem-${{ hashFiles('**/Gemfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pkg-and-gem-
+     - name: Create cache directory
+       run: |
+          sudo install -m 755 -o $UID -d /cache
       - name: Show cache # for debug
         run: |
           ls -alR /cache
-        continue-on-error: true
       - name: Bundle install
         run: |
           cd tool/snapshot
