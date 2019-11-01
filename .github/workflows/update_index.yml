@@ -28,6 +28,7 @@ jobs:
       - name: Show cache # for debug
         run: |
           ls -alR /cache
+        continue-on-error: true
       - name: Bundle install
         run: |
           cd tool/snapshot
