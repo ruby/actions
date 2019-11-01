@@ -9,8 +9,6 @@ on:
 jobs:
   update_index:
     runs-on: ubuntu-latest
-    env:
-      XDG_CACHE_HOME: "/cache"
     steps:
       - name: Install libraries
         run: |
@@ -21,20 +19,14 @@ jobs:
         run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
       - uses: actions/cache@preview
         with:
-          path: /cache
-          key: ${{ runner.os }}-pkg-and-gem-${{ hashFiles('**/Gemfile.lock') }}
+          path: tool/snapshot/vendor/bundle
+          key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pkg-and-gem-
-      - name: Create cache directory
-        run: |
-          sudo install -m 755 -o $UID -d /cache
-      - name: Show cache # for debug
-        run: |
-          ls -alR /cache
+            ${{ runner.os }}-gem-
       - name: Bundle install
         run: |
           cd tool/snapshot
-          bundle install --path $XDG_CACHE_HOME/vendor/bundle --jobs 4 --retry 3
+          bundle install --path vendor/bundle --jobs 4 --retry 3
       - name: Update index
         run: |
           cd tool/snapshot
