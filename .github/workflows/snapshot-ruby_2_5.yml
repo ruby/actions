@@ -270,7 +270,7 @@ jobs:
           rm -rf spec/mspec spec/ruby
           git clone --depth=1 https://github.com/ruby/mspec spec/mspec
           git clone --depth=1 https://github.com/ruby/spec spec/ruby
-          make $JOBS check TESTOPTS="-q --tty=no --subprocess-timeout-scale=1.5" MSPECOPT="-ff"
+          make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
         if: always()
       - name: make test-bundled-gems
         run: cd snapshot-*/ && make test-bundled-gems
