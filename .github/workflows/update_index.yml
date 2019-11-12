@@ -17,7 +17,7 @@ jobs:
           sudo apt-get install --no-install-recommends -y ruby bundler
       - name: Checkout ${{ github.repository }}
         run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
-      - uses: actions/cache@preview
+      - uses: actions/cache@v1
         with:
           path: tool/snapshot/vendor/bundle
           key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
