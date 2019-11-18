@@ -109,7 +109,7 @@ jobs:
               "attachments": [{
                 title: "Build Draft Release ${{ github.event.action }} ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}> ",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} make-snapshot>",
                 "color": "danger"
               }]
             }
@@ -123,7 +123,7 @@ jobs:
               "attachments": [{
                 title: "Build Draft Release ${{ github.event.action }} ${{ github.ref }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} check-draft-release>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} make-snapshot>",
                 "color": "good"
               }]
             }
