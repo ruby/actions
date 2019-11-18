@@ -54,9 +54,10 @@ jobs:
           GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
           TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
           if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<=2 && minor<7)"; then
+            # e.g. GITHUB_REF=refs/tags/draft/v2_6_4 -> TARGET_VERSION=2.6.4
             ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
           else
-            # e.g. refs/tags/draft/v2_7_0_preview1
+            # e.g. GITHUB_REF=refs/tags/draft/v2_7_0_preview1 -> TARGET_VERSION=2.7.0-preview1
             pushd ruby
             git fetch --shallow-since='2018-12-25 00:00:00'
             git fetch origin "+${GITHUB_REF}:${GITHUB_REF}"
@@ -64,6 +65,7 @@ jobs:
             popd
             ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
           fi
+          ruby -e "puts %(${TARGET_VERSION}).include?(?-)" > pkg/pre-release
         env:
           GITHUB_EVENT_ACTION: ${{ github.event.action }}
       - uses: actions/upload-artifact@master
@@ -172,6 +174,12 @@ jobs:
         run: tar xf pkg/ruby-*.tar.xz
       - name: Update spec
         run: |
+          if $(cat pkg/pre-release); then
+            echo Use spec in tarball if pre-release
+            exit
+          else
+            echo Use latest ruby/spec
+          fi
           set -x
           cd ruby-*/
           rm -rf spec/mspec spec/ruby
