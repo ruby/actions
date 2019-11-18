@@ -313,6 +313,20 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/ruby-*.tar.xz
+      - name: Update spec
+        run: |
+          if $(cat pkg/pre-release); then
+            echo Use spec in tarball if pre-release
+            exit
+          else
+            echo Use latest ruby/spec
+          fi
+          set -x
+          cd ruby-*/
+          rm -rf spec/mspec spec/ruby
+          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
+          git clone --depth=1 https://github.com/ruby/spec spec/ruby
+        if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
           with_retry () {
@@ -329,13 +343,7 @@ jobs:
       - name: make
         run: cd ruby-*/ && make $JOBS
       - name: make check
-        run: |
-          set -x
-          cd ruby-*/
-          rm -rf spec/mspec spec/ruby
-          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
-          git clone --depth=1 https://github.com/ruby/spec spec/ruby
-          make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        run: cd ruby-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
         if: matrix.test_task == 'check'
       - name: make test-bundler
         run: cd ruby-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
