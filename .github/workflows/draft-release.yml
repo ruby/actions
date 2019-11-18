@@ -195,12 +195,15 @@ jobs:
         run: |
           set -x
           sudo apt-get update -q
+          # postfix `-` means `uninstall`
           APT_INSTALL_RUBY=ruby-
           APT_INSTALL_GIT=git-
           case "${{ matrix.test_task }}" in
             test-bundled-gems)
               # test-bundled-gems requires executable host ruby
               APT_INSTALL_RUBY=ruby
+              # test-bundled-gems-fetch requires git
+              unset APT_INSTALL_GIT
               ;;
             test-bundler)
               # avoid Bundler::Source::Git::GitNotInstalledError
