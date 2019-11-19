@@ -109,7 +109,7 @@ jobs:
               "attachments": [{
                 title: "Build Draft Release ${{ github.event.action }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "danger"
               }]
             }
@@ -123,7 +123,7 @@ jobs:
               "attachments": [{
                 title: "Build Draft Release ${{ github.event.action }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "good"
               }]
             }
@@ -243,7 +243,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "danger"
               }]
             }
@@ -255,7 +255,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "good"
               }]
             }
@@ -356,7 +356,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "danger"
               }]
             }
@@ -368,7 +368,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "good"
               }]
             }
@@ -458,7 +458,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "danger"
               }]
             }
@@ -470,7 +470,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "good"
               }]
             }
