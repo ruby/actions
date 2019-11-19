@@ -86,7 +86,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} make-snapshot>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} make-snapshot>",
                 "color": "danger"
               }]
             }
@@ -211,7 +211,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} / ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} ${{ matrix.os }} / ${{ matrix.test_task }}>",
                 "color": "danger"
               }]
             }
@@ -318,7 +318,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }}>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }} ${{ matrix.os }}>",
                 "color": "danger"
               }]
             }
@@ -408,7 +408,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}/checks|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }
