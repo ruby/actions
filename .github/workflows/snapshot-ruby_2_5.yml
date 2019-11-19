@@ -102,7 +102,7 @@ jobs:
         test_task: [check, test-bundler, test-bundled-gems]
         exclude:
           - test_task: test-bundler
-            os: ubuntu-18.04
+            os: ubuntu-latest
           - test_task: test-bundler
             os: ubuntu-16.04
           - test_task: test-bundled-gems
