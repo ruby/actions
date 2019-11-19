@@ -194,9 +194,6 @@ jobs:
         run: cd snapshot-*/ && make test-bundled-gems
         if: matrix.test_task == 'test-bundled-gems'
         continue-on-error: true
-      - name: Leaked Globals
-        run: cd snapshot-*/ && make -s leaked-globals
-        if: matrix.test_task == 'check'
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: matrix.test_task == 'check'
@@ -301,9 +298,6 @@ jobs:
         run: cd snapshot-*/ && make test-bundled-gems
         if: matrix.test_task == 'test-bundled-gems'
         continue-on-error: true
-      - name: Leaked Globals
-        run: cd snapshot-*/ && make -s leaked-globals
-        if: matrix.test_task == 'check'
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: matrix.test_task == 'check'

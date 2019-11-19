@@ -161,8 +161,6 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: make test
         run: cd snapshot-*/ && make $JOBS test TESTOPTS="-q --tty=no"
-      - name: Leaked Globals
-        run: cd snapshot-*/ && make -s leaked-globals
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install
@@ -252,8 +250,6 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: make test
         run: cd snapshot-*/ && make $JOBS test TESTOPTS="-q --tty=no"
-      - name: Leaked Globals
-        run: cd snapshot-*/ && make -s leaked-globals
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install

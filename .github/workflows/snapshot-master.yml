@@ -179,6 +179,7 @@ jobs:
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
+      # leaked-globals since 2.7
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
         if: matrix.test_task == 'check'
@@ -268,6 +269,7 @@ jobs:
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
+      # leaked-globals since 2.7
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
         if: matrix.test_task == 'check'
