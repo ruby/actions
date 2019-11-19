@@ -107,9 +107,9 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Build Draft Release ${{ github.event.action }} ${{ github.ref }}",
+                title: "Build Draft Release ${{ github.event.action }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} make-snapshot>",
+                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "danger"
               }]
             }
@@ -121,9 +121,9 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Build Draft Release ${{ github.event.action }} ${{ github.ref }}",
+                title: "Build Draft Release ${{ github.event.action }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} make-snapshot>",
+                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "good"
               }]
             }
@@ -219,22 +219,16 @@ jobs:
           sudo chmod -R go-w /usr/share
       - name: Set ENV
         run: |
-          echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
+          echo '::set-env name=JOBS::'-j$((1 + $(nproc --all)))
       - name: configure
         run: cd ruby-*/ && ./configure
       - name: make
         run: cd ruby-*/ && make $JOBS
-      - name: make check
-        run: cd ruby-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        if: matrix.test_task == 'check'
-      - name: make test-bundler
-        run: cd ruby-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        if: matrix.test_task == 'test-bundler'
-      - name: make test-bundled-gems
-        run: cd ruby-*/ && make test-bundled-gems
+      - name: Tests
+        run: cd ruby-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
+          MSPECOPT: "-ff" # not using `-j` because sometimes `mspec -j` silently dies (for ruby < 2.7)
           RUBY_TESTOPTS: "-q --tty=no"
-        if: matrix.test_task == 'test-bundled-gems'
       - name: make install without root privilege
         run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: matrix.test_task == 'check'
@@ -249,8 +243,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check on ubuntu ${{ github.event.action }} ${{ github.ref }}",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "danger"
               }]
             }
@@ -262,8 +255,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check on ubuntu ${{ github.event.action }} ${{ github.ref }}",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "good"
               }]
             }
@@ -340,22 +332,16 @@ jobs:
           with_retry brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
       - name: Set ENV
         run: |
-          echo '##[set-env name=JOBS]'-j$((1 + $(sysctl -n hw.activecpu)))
+          echo '::set-env name=JOBS::'-j$((1 + $(sysctl -n hw.activecpu)))
       - name: configure
         run: cd ruby-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       - name: make
         run: cd ruby-*/ && make $JOBS
-      - name: make check
-        run: cd ruby-*/ && make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        if: matrix.test_task == 'check'
-      - name: make test-bundler
-        run: cd ruby-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
-        if: matrix.test_task == 'test-bundler'
-      - name: make test-bundled-gems
-        run: cd ruby-*/ && make test-bundled-gems
+      - name: Tests
+        run: cd ruby-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
+          MSPECOPT: "-ff" # not using `-j` because sometimes `mspec -j` silently dies (for ruby < 2.7)
           RUBY_TESTOPTS: "-q --tty=no"
-        if: matrix.test_task == 'test-bundled-gems'
       - name: make install without root privilege
         run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: matrix.test_task == 'check'
@@ -370,8 +356,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check on macos ${{ github.event.action }} ${{ github.ref }}",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "danger"
               }]
             }
@@ -383,8 +368,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check on macos ${{ github.event.action }} ${{ github.ref }}",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "good"
               }]
             }
@@ -474,8 +458,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check on windows ${{ github.event.action }} ${{ github.ref }}",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "danger"
               }]
             }
@@ -487,8 +470,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Check on windows ${{ github.event.action }} ${{ github.ref }}",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} at ${{ github.event.action }}>",
                 "color": "good"
               }]
             }

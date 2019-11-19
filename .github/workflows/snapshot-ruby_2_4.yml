@@ -135,6 +135,14 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/*.tar.xz
+      - name: Update spec
+        run: |
+          set -x
+          cd snapshot-*/
+          rm -rf spec/mspec spec/ruby
+          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
+          git clone --depth=1 https://github.com/ruby/spec spec/ruby
+        if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
           set -x
@@ -146,13 +154,15 @@ jobs:
           sudo chmod -R go-w /usr/share
       - name: Set ENV
         run: |
-          echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
+          echo '::set-env name=JOBS::'-j$((1 + $(nproc --all)))
       - name: configure
         run: cd snapshot-*/ && ./configure
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: make test
         run: cd snapshot-*/ && make $JOBS test TESTOPTS="-q --tty=no"
+      - name: Leaked Globals
+        run: cd snapshot-*/ && make -s leaked-globals
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install
@@ -164,7 +174,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} / ${{ matrix.test_task }}>",
                 "color": "danger"
               }]
             }
@@ -177,6 +187,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest]
+        test_task: [test]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -216,6 +227,14 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/*.tar.xz
+      - name: Update spec
+        run: |
+          set -x
+          cd snapshot-*/
+          rm -rf spec/mspec spec/ruby
+          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
+          git clone --depth=1 https://github.com/ruby/spec spec/ruby
+        if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
           with_retry () {
@@ -226,13 +245,15 @@ jobs:
           with_retry brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
       - name: Set ENV
         run: |
-          echo '##[set-env name=JOBS]'-j$((1 + $(sysctl -n hw.activecpu)))
+          echo '::set-env name=JOBS::'-j$((1 + $(sysctl -n hw.activecpu)))
       - name: configure
         run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: make test
         run: cd snapshot-*/ && make $JOBS test TESTOPTS="-q --tty=no"
+      - name: Leaked Globals
+        run: cd snapshot-*/ && make -s leaked-globals
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
       - name: make install
@@ -334,7 +355,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }

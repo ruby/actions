@@ -146,12 +146,15 @@ jobs:
         run: |
           set -x
           sudo apt-get update -q
+          # postfix `-` means `uninstall`
           APT_INSTALL_RUBY=ruby-
           APT_INSTALL_GIT=git-
           case "${{ matrix.test_task }}" in
             test-bundled-gems)
               # test-bundled-gems requires executable host ruby
               APT_INSTALL_RUBY=ruby
+              # test-bundled-gems-fetch requires git
+              unset APT_INSTALL_GIT
               ;;
             test-bundler)
               # avoid Bundler::Source::Git::GitNotInstalledError
@@ -167,24 +170,15 @@ jobs:
           sudo chmod -R go-w /usr/share
       - name: Set ENV
         run: |
-          echo '##[set-env name=JOBS]'-j$((1 + $(nproc --all)))
+          echo '::set-env name=JOBS::'-j$((1 + $(nproc --all)))
       - name: configure
         run: cd snapshot-*/ && ./configure
       - name: make
         run: cd snapshot-*/ && make $JOBS
-      - name: make check
-        run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no"
-        if: matrix.test_task == 'check'
-      - name: make test-bundler
-        run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no"
-        if: matrix.test_task == 'test-bundler'
-        continue-on-error: true
-      - name: make test-bundled-gems
-        run: cd snapshot-*/ && make test-bundled-gems
+      - name: Tests
+        run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
-        if: matrix.test_task == 'test-bundled-gems'
-        continue-on-error: true
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
         if: matrix.test_task == 'check'
@@ -202,7 +196,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} / ${{ matrix.test_task }}>",
                 "color": "danger"
               }]
             }
@@ -215,6 +209,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest]
+        test_task: [check, test-bundler, test-bundled-gems]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -264,36 +259,27 @@ jobs:
           with_retry brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
       - name: Set ENV
         run: |
-          echo '##[set-env name=JOBS]'-j$((1 + $(sysctl -n hw.activecpu)))
+          echo '::set-env name=JOBS::'-j$((1 + $(sysctl -n hw.activecpu)))
       - name: configure
         run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       - name: make
         run: cd snapshot-*/ && make $JOBS
-      - name: make check
-        run: cd snapshot-*/ && make $JOBS check TESTOPTS="-q --tty=no"
-        if: always()
-      - name: make test-bundler
-        run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no"
-        if: always()
-        continue-on-error: true
-      - name: make test-bundled-gems
-        run: cd snapshot-*/ && make test-bundled-gems
+      - name: Tests
+        run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
-        if: always()
-        continue-on-error: true
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
-        if: always()
+        if: matrix.test_task == 'check'
       - name: make install without root privilege
         run: cd snapshot-*/ && make $JOBS install DESTDIR="$HOME/dummy"
-        if: always()
+        if: matrix.test_task == 'check'
       - name: make install
         run: cd snapshot-*/ && sudo make $JOBS install
-        if: always()
+        if: matrix.test_task == 'check'
       - name: ruby -v
         run: /usr/local/bin/ruby -v
-        if: always()
+        if: matrix.test_task == 'check'
       - uses: k0kubun/action-slack@v2.0.0
         with:
           payload: |
@@ -389,7 +375,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }} ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }
