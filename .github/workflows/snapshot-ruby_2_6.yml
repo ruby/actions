@@ -98,8 +98,8 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-16.04]
         test_task: [check, test-bundler, test-bundled-gems]
+        os: [ubuntu-latest, ubuntu-16.04]
         exclude:
           - test_task: test-bundler
             os: ubuntu-16.04
@@ -218,8 +218,8 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        os: [macos-latest]
         test_task: [check, test-bundler, test-bundled-gems]
+        os: [macos-latest]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:

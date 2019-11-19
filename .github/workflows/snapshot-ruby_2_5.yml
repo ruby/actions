@@ -220,8 +220,8 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        os: [macos-latest]
         test_task: [check, test-bundler, test-bundled-gems]
+        os: [macos-latest]
         exclude:
           - test_task: test-bundler
             os: macos-latest
