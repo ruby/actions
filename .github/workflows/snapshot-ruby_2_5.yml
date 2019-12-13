@@ -46,7 +46,7 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -q
+          sudo apt-get update -q || :
           sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
@@ -153,7 +153,7 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -q
+          sudo apt-get update -q || :
           # postfix `-` means `uninstall`
           APT_INSTALL_RUBY=ruby-
           APT_INSTALL_GIT=git-

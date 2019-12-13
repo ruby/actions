@@ -46,7 +46,7 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -q
+          sudo apt-get update -q || :
           sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby for tool/make-snapshot
         run: git clone --depth=1 https://github.com/ruby/ruby ruby
@@ -146,7 +146,7 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo apt-get update -q
+          sudo apt-get update -q || :
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- ruby- git-
       - name: Fixed world writable dirs
         run: |
