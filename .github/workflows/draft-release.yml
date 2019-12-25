@@ -45,6 +45,7 @@ jobs:
             git fetch --shallow-since='2018-12-25 00:00:00'
             git fetch origin "+${GITHUB_REF_RUBY_RUBY}:${GITHUB_REF_RUBY_RUBY}"
             git fetch origin +refs/notes/commits:refs/notes/commits
+            git fetch origin +refs/notes/log-fix:refs/notes/log-fix
             popd
             ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
           fi
