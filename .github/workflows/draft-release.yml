@@ -65,7 +65,6 @@ jobs:
             popd
             ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
           fi
-          ruby -e "puts %(${TARGET_VERSION}).include?(?-)" > pkg/pre-release
         env:
           GITHUB_EVENT_ACTION: ${{ github.event.action }}
       - uses: actions/upload-artifact@master
@@ -179,17 +178,11 @@ jobs:
         run: tar xf pkg/ruby-*.tar.xz
       - name: Update spec
         run: |
-          if $(cat pkg/pre-release); then
-            echo Use spec in tarball if pre-release
-            exit
-          else
-            echo Use latest ruby/spec
-          fi
           set -x
+          git clone --depth=1 https://github.com/ruby/ruby ruby
           cd ruby-*/
           rm -rf spec/mspec spec/ruby
-          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
-          git clone --depth=1 https://github.com/ruby/spec spec/ruby
+          mv -v ../ruby/spec/mspec ../ruby/spec/ruby spec
         if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
@@ -310,17 +303,11 @@ jobs:
         run: tar xf pkg/ruby-*.tar.xz
       - name: Update spec
         run: |
-          if $(cat pkg/pre-release); then
-            echo Use spec in tarball if pre-release
-            exit
-          else
-            echo Use latest ruby/spec
-          fi
           set -x
+          git clone --depth=1 https://github.com/ruby/ruby ruby
           cd ruby-*/
           rm -rf spec/mspec spec/ruby
-          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
-          git clone --depth=1 https://github.com/ruby/spec spec/ruby
+          mv -v ../ruby/spec/mspec ../ruby/spec/ruby spec
         if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
