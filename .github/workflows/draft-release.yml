@@ -41,6 +41,18 @@ jobs:
   make-snapshot:
     runs-on: ubuntu-latest
     steps:
+      - name: Set TARGET_VERSION
+        run: |
+          set -x
+          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
+          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          echo "::set-output name=GITHUB_REF_RUBY_RUBY::$GITHUB_REF"
+          echo "::set-output name=TARGET_VERSION::$TARGET_VERSION"
+        shell: bash
+        id: info
+        env:
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+
       - name: Install libraries
         run: |
           set -x
@@ -51,8 +63,8 @@ jobs:
       - name: Make pkg
         run: |
           set -x
-          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          GITHUB_REF_RUBY_RUBY=${{ steps.info.outputs.GITHUB_REF_RUBY_RUBY }}
+          TARGET_VERSION=${{ steps.info.outputs.TARGET_VERSION }}
           if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<=2 && minor<7)"; then
             # e.g. GITHUB_REF=refs/tags/draft/v2_6_4 -> TARGET_VERSION=2.6.4
             ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
@@ -60,13 +72,11 @@ jobs:
             # e.g. GITHUB_REF=refs/tags/draft/v2_7_0_preview1 -> TARGET_VERSION=2.7.0-preview1
             pushd ruby
             git fetch --shallow-since='2018-12-25 00:00:00'
-            git fetch origin "+${GITHUB_REF}:${GITHUB_REF}"
+            git fetch origin "+${GITHUB_REF_RUBY_RUBY}:${GITHUB_REF_RUBY_RUBY}"
             git fetch origin +refs/notes/commits:refs/notes/commits
             popd
             ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
           fi
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
       - uses: actions/upload-artifact@master
         with:
           name: Packages
@@ -78,19 +88,15 @@ jobs:
       - name: Check pkg
         run: |
           set -x
-          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          TARGET_VERSION=${{ steps.info.outputs.TARGET_VERSION }}
           ls -al pkg
           7z x pkg/ruby-${TARGET_VERSION}.zip ruby-${TARGET_VERSION}/revision.h
           cat ruby-${TARGET_VERSION}/revision.h
           7z l pkg/ruby-${TARGET_VERSION}.zip ruby-${TARGET_VERSION}/ChangeLog
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
       - name: Upload s3
         run: |
           set -x
-          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          TARGET_VERSION=${{ steps.info.outputs.TARGET_VERSION }}
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
             aws s3 cp "pkg/ruby-${TARGET_VERSION}$ext" "s3://ftp.r-l.o/pub/tmp/ruby-${TARGET_VERSION}-draft$ext" --no-progress
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}-draft$ext"
@@ -98,7 +104,6 @@ jobs:
           aws s3 cp "pkg/info/info.yml" "s3://ftp.r-l.o/pub/tmp/ruby-info-${TARGET_VERSION}-draft.yml" --no-progress
           curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-info-${TARGET_VERSION}-draft.yml"
         env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
       - uses: k0kubun/action-slack@v2.0.0
@@ -106,9 +111,9 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Build Draft Release ${{ github.event.action }}",
+                title: "Build Draft Release ${{ steps.info.outputs.TARGET_VERSION }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ steps.info.outputs.TARGET_VERSION }}>",
                 "color": "danger"
               }]
             }
@@ -120,9 +125,9 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Build Draft Release ${{ github.event.action }}",
+                title: "Build Draft Release ${{ steps.info.outputs.TARGET_VERSION }}",
                 title_link: "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ steps.info.outputs.TARGET_VERSION }}>",
                 "color": "good"
               }]
             }
@@ -144,6 +149,18 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Set TARGET_VERSION
+        run: |
+          set -x
+          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
+          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          echo "::set-output name=GITHUB_REF_RUBY_RUBY::$GITHUB_REF"
+          echo "::set-output name=TARGET_VERSION::$TARGET_VERSION"
+        shell: bash
+        id: info
+        env:
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+
       - run: env | sort
       - name: Dump GitHub context
         env:
@@ -236,7 +253,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ steps.info.outputs.TARGET_VERSION }}>",
                 "color": "danger"
               }]
             }
@@ -248,7 +265,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ steps.info.outputs.TARGET_VERSION }}>",
                 "color": "good"
               }]
             }
@@ -265,6 +282,18 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Set TARGET_VERSION
+        run: |
+          set -x
+          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
+          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          echo "::set-output name=GITHUB_REF_RUBY_RUBY::$GITHUB_REF"
+          echo "::set-output name=TARGET_VERSION::$TARGET_VERSION"
+        shell: bash
+        id: info
+        env:
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+
       - run: env | sort
       - name: Dump GitHub context
         env:
@@ -343,7 +372,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ steps.info.outputs.TARGET_VERSION }}>",
                 "color": "danger"
               }]
             }
@@ -355,7 +384,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ steps.info.outputs.TARGET_VERSION }}>",
                 "color": "good"
               }]
             }
@@ -373,6 +402,18 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Set TARGET_VERSION
+        run: |
+          set -x
+          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
+          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          echo "::set-output name=GITHUB_REF_RUBY_RUBY::$GITHUB_REF"
+          echo "::set-output name=TARGET_VERSION::$TARGET_VERSION"
+        shell: bash
+        id: info
+        env:
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+
       - run: env | sort
       - name: Dump GitHub context
         env:
@@ -440,7 +481,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ steps.info.outputs.TARGET_VERSION }}>",
                 "color": "danger"
               }]
             }
@@ -452,7 +493,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ github.event.action }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/?query=workflow%3A%22${{ github.workflow }}%22|${{ github.workflow }} at ${{ steps.info.outputs.TARGET_VERSION }}>",
                 "color": "good"
               }]
             }
