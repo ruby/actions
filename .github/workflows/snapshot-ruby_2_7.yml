@@ -53,7 +53,7 @@ jobs:
       - name: Fetch notes
         run: cd ruby && git fetch origin +refs/notes/commits:refs/notes/commits
       - name: Make snapshot
-        run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby pkg
+        run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby pkg 2.7
       - uses: actions/upload-artifact@master
         with:
           name: Packages
