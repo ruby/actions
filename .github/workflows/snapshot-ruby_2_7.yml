@@ -49,9 +49,15 @@ jobs:
           sudo apt-get update -q || :
           sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
       - name: Checkout ruby/ruby
-        run: git clone --single-branch --shallow-since='2019-12-25 00:00:00' https://github.com/ruby/ruby ruby
-      - name: Fetch notes
-        run: cd ruby && git fetch origin +refs/notes/commits:refs/notes/commits
+        run: git clone --depth=1 https://github.com/ruby/ruby ruby
+      - name: Fetch branches
+        run: |
+          set -x
+          cd ruby
+            git fetch --shallow-since='2018-12-25 00:00:00'
+            git fetch origin "+ruby_2_7:ruby_2_7"
+            git fetch origin +refs/notes/commits:refs/notes/commits
+            git fetch origin +refs/notes/log-fix:refs/notes/log-fix
       - name: Make snapshot
         run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby pkg 2.7
       - uses: actions/upload-artifact@master
