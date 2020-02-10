@@ -82,7 +82,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/actions/?query=workflow%3A${{ github.workflow }}|${{ github.workflow }} stable-snapshot>",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} stable-snapshot>",
                 "color": "danger"
               }]
             }
