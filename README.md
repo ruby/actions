@@ -16,13 +16,6 @@
 
 This repository is automation tool for ruby workflows.
 
-# old ruby-snapshot
-
-We switched from Heroku to GitHub Actions.
-Some files are not used now.
-
-See `before-adding-github-workflows` tag for old information.
-
 # TODO
 
 * Documentation :)
