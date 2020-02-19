@@ -257,7 +257,7 @@ jobs:
             "$@" || { sleep 5 && "$@"; } || { sleep 60 && "$@"; }
           }
           set -x
-          with_retry brew update
+          with_retry brew upgrade
           with_retry brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
       - name: Set ENV
         run: |
