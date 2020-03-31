@@ -211,6 +211,7 @@ jobs:
         env:
           MSPECOPT: "-ff" # not using `-j` because sometimes `mspec -j` silently dies (for ruby < 2.7)
           RUBY_TESTOPTS: "-q --tty=no"
+          TEST_BUNDLED_GEMS_ALLOW_FAILURES: "minitest,xmlrpc,rss,rexml"
       - name: make install without root privilege
         run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: matrix.test_task == 'check'
@@ -330,6 +331,7 @@ jobs:
         env:
           MSPECOPT: "-ff" # not using `-j` because sometimes `mspec -j` silently dies (for ruby < 2.7)
           RUBY_TESTOPTS: "-q --tty=no"
+          TEST_BUNDLED_GEMS_ALLOW_FAILURES: "minitest,xmlrpc,rss,rexml"
       - name: make install without root privilege
         run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
         if: matrix.test_task == 'check'
