@@ -19,3 +19,7 @@ This repository is automation tool for ruby workflows.
 # TODO
 
 * Documentation :)
+
+# Documentation for [release managers](https://bugs.ruby-lang.org/projects/ruby/wiki/ReleaseEngineering)
+
+See <https://bugs.ruby-lang.org/projects/ruby/wiki/HowToReleaseJa>
