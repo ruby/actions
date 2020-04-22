@@ -197,8 +197,9 @@ jobs:
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
       - name: Fixed world writable dirs
         run: |
-          chmod go-w $HOME
+          chmod -v go-w $HOME $HOME/.config
           sudo chmod -R go-w /usr/share
+          sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v go-w $d; done' || :
       - name: Set ENV
         run: |
           echo '::set-env name=JOBS::'-j$((1 + $(nproc --all)))
