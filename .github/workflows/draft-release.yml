@@ -197,9 +197,9 @@ jobs:
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
       - name: Fixed world writable dirs
         run: |
-          chmod -v go-w $HOME $HOME/.config
-          sudo chmod -R go-w /usr/share
-          sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v go-w $d; done' || :
+          chmod -v a-w $HOME $HOME/.config
+          sudo chmod -R a-w /usr/share
+          sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
       - name: Set ENV
         run: |
           echo '::set-env name=JOBS::'-j$((1 + $(nproc --all)))
@@ -214,7 +214,7 @@ jobs:
           RUBY_TESTOPTS: "-q --tty=no"
           TEST_BUNDLED_GEMS_ALLOW_FAILURES: "minitest,xmlrpc,rss,rexml"
       - name: make install without root privilege
-        run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
+        run: cd ruby-*/ && make $JOBS install DESTDIR="/tmp/destdir"
         if: matrix.test_task == 'check'
       - name: make install
         run: cd ruby-*/ && sudo make $JOBS install
@@ -334,7 +334,7 @@ jobs:
           RUBY_TESTOPTS: "-q --tty=no"
           TEST_BUNDLED_GEMS_ALLOW_FAILURES: "minitest,xmlrpc,rss,rexml"
       - name: make install without root privilege
-        run: cd ruby-*/ && make $JOBS install DESTDIR="$HOME/dummy"
+        run: cd ruby-*/ && make $JOBS install DESTDIR="/tmp/destdir"
         if: matrix.test_task == 'check'
       - name: make install
         run: cd ruby-*/ && sudo make $JOBS install
