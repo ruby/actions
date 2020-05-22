@@ -6,7 +6,6 @@
 [![Actions Status](https://github.com/ruby/actions/workflows/snapshot-ruby_2_5/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_2_5")
 [![Actions Status](https://github.com/ruby/actions/workflows/snapshot-ruby_2_6/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_2_6")
 [![Actions Status](https://github.com/ruby/actions/workflows/snapshot-ruby_2_7/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_2_7")
-[![Actions Status](https://github.com/ruby/actions/workflows/snapshot-master/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-master")
 [![Actions Status](https://github.com/ruby/actions/workflows/snapshot/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot")
 [![Actions Status](https://github.com/ruby/actions/workflows/stable-snapshot/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"stable-snapshot")
 [![Actions Status](https://github.com/ruby/actions/workflows/update_index/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"update_index")
