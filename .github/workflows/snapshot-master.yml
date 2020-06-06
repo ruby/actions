@@ -100,10 +100,10 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        test_task: [check, test-bundler, test-bundled-gems]
+        test_task: [check, test-bundler-parallel, test-bundled-gems]
         os: [ubuntu-latest, ubuntu-16.04]
         exclude:
-          - test_task: test-bundler
+          - test_task: test-bundler-parallel
             os: ubuntu-16.04
           - test_task: test-bundled-gems
             os: ubuntu-16.04
@@ -156,7 +156,7 @@ jobs:
               # test-bundled-gems-fetch requires git
               unset APT_INSTALL_GIT
               ;;
-            test-bundler)
+            test-bundler-parallel)
               # avoid Bundler::Source::Git::GitNotInstalledError
               unset APT_INSTALL_GIT
               ;;
@@ -214,7 +214,7 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        test_task: [check, test-bundler, test-bundled-gems]
+        test_task: [check, test-bundler-parallel, test-bundled-gems]
         os: [macos-latest]
       fail-fast: false
     runs-on: ${{ matrix.os }}
