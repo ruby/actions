@@ -2,7 +2,7 @@ name: update_index
 
 on:
   schedule:
-    - cron: '17 1-22/3 * * *'
+    - cron: '17 16 * * *'
   repository_dispatch:
     types: "update_index"
 
