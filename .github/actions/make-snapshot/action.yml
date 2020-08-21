@@ -10,8 +10,7 @@ inputs:
     default: '2018-12-25 00:00:00'
   fetch-branch:
     description: 'fetch branch'
-    required: true
-    default: 'master'
+    required: false
 
 runs:
   using: "composite"
@@ -30,7 +29,7 @@ runs:
         set -x
         cd ruby
         git fetch --shallow-since='${{ inputs.shallow-since }}'
-        git fetch origin '+${{ inputs.fetch-branch }}:${{ inputs.fetch-branch }}'
+        [ -n "${{ inputs.fetch-branch }}" ] && git fetch origin '+${{ inputs.fetch-branch }}:${{ inputs.fetch-branch }}'
         git fetch origin '+refs/notes/commits:refs/notes/commits'
         git fetch origin '+refs/notes/log-fix:refs/notes/log-fix'
       shell: bash
