@@ -21,8 +21,10 @@ runs:
         set -x
         sudo apt-get update -q || :
         sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
+      shell: bash
     - name: Checkout ruby/ruby
       run: git clone --single-branch --depth=1 https://github.com/ruby/ruby ruby
+      shell: bash
     - name: Fetch branches and notes
       run: |
         set -x
@@ -31,5 +33,7 @@ runs:
         git fetch origin '+${{ inputs.fetch-branch }}:${{ inputs.fetch-branch }}'
         git fetch origin '+refs/notes/commits:refs/notes/commits'
         git fetch origin '+refs/notes/log-fix:refs/notes/log-fix'
+      shell: bash
     - name: Make snapshot
       run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby pkg ${{ inputs.version }}
+      shell: bash
