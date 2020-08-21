@@ -14,17 +14,7 @@ jobs:
     env:
       archname: snapshot-master
     steps:
-      - name: Install libraries
-        run: |
-          set -x
-          sudo apt-get update -q || :
-          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
-      - name: Checkout ruby/ruby
-        run: git clone --single-branch --shallow-since='2018-12-25 00:00:00' https://github.com/ruby/ruby ruby
-      - name: Fetch notes
-        run: cd ruby && git fetch origin +refs/notes/commits:refs/notes/commits
-      - name: Make snapshot
-        run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby pkg
+      - uses: ./.github/actions/make-snapshot
       - uses: actions/upload-artifact@master
         with:
           name: Packages
