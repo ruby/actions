@@ -150,7 +150,7 @@ jobs:
           sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
       - name: Set ENV
         run: |
-          echo '::set-env name=JOBS::'-j$((1 + $(nproc --all)))
+          echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
       - name: configure
         run: cd snapshot-*/ && ./configure
       - name: make
@@ -254,7 +254,7 @@ jobs:
           with_retry brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
       - name: Set ENV
         run: |
-          echo '::set-env name=JOBS::'-j$((1 + $(sysctl -n hw.activecpu)))
+          echo "JOBS=-j$((1 + $(sysctl -n hw.activecpu)))" >> $GITHUB_ENV
       - name: configure
         run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       - name: make
