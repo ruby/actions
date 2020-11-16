@@ -18,7 +18,7 @@ jobs:
       - name: Remove from s3
         run: |
           set -x
-          TARGET_VERSION="${{ github.event.inputs.TARGET_VERSION }}""${GITHUB_EVENT_ACTION#Remove pub/tmp/ruby-}}"
+          TARGET_VERSION="${{ github.event.inputs.TARGET_VERSION }}""${GITHUB_EVENT_ACTION#Remove pub/tmp/ruby-}"
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
             aws s3 rm "s3://ftp.r-l.o/pub/tmp/ruby-${TARGET_VERSION}$ext"
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}$ext"
