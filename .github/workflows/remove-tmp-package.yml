@@ -9,7 +9,7 @@ on:
       TARGET_VERSION:
         description: The version of Ruby to remove tmp archives in https://ftp.ruby-lang.org/pub/tmp/
         required: true
-        default: 3.0.0-preview1
+        default: 3.0.0-preview1-draft
 
 jobs:
   remove:
