@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       TARGET_VERSION:
-        description: Target version of https://github.com/ruby/ruby
+        description: Packaging target version
         required: true
-        default: 3_0_0_preview1
+        default: 3.0.0-preview1
 
 jobs:
   make-snapshot:
@@ -30,7 +30,7 @@ jobs:
       - name: Make pkg
         run: |
           set -x
-          GITHUB_REF_RUBY_RUBY=refs/tags/v$TARGET_VERSION
+          GITHUB_REF_RUBY_RUBY=refs/tags/v$(echo $TARGET_VERSION | sed 'y/.-/__/')
           if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<=2 && minor<7)"; then
             # e.g. GITHUB_REF=refs/tags/draft/v2_6_4 -> TARGET_VERSION=2.6.4
             ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
