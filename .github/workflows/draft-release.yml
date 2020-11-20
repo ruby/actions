@@ -1,12 +1,12 @@
 name: Make draft release package
 
 on:
-  push:
-    tags:
-      - 'draft/v*' # e.g. draft/v2_6_4
-  repository_dispatch:
-    types:
-      - "refs/tags/v*" # e.g. refs/tags/v2_6_4
+  workflow_dispatch:
+    inputs:
+      TARGET_VERSION:
+        description: Target version of https://github.com/ruby/ruby
+        required: true
+        default: 3_0_0_preview1
 
 jobs:
   make-snapshot:
@@ -14,15 +14,11 @@ jobs:
     steps:
       - name: Set TARGET_VERSION
         run: |
-          set -x
-          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          echo "::set-output name=GITHUB_REF_RUBY_RUBY::$GITHUB_REF"
+          TARGET_VERSION="${{ github.event.inputs.TARGET_VERSION }}"
+          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
           echo "::set-output name=TARGET_VERSION::$TARGET_VERSION"
         shell: bash
         id: info
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
 
       - name: Install libraries
         run: |
@@ -34,8 +30,7 @@ jobs:
       - name: Make pkg
         run: |
           set -x
-          GITHUB_REF_RUBY_RUBY=${{ steps.info.outputs.GITHUB_REF_RUBY_RUBY }}
-          TARGET_VERSION=${{ steps.info.outputs.TARGET_VERSION }}
+          GITHUB_REF_RUBY_RUBY=refs/tags/v$TARGET_VERSION
           if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<=2 && minor<7)"; then
             # e.g. GITHUB_REF=refs/tags/draft/v2_6_4 -> TARGET_VERSION=2.6.4
             ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
@@ -50,6 +45,7 @@ jobs:
             if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<3)"; then
               ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
             else
+              # exclude bzip from -packages
               ruby ruby/tool/make-snapshot -srcdir=ruby -packages=gzip,xz,zip pkg ${TARGET_VERSION}
             fi
           fi
@@ -64,7 +60,6 @@ jobs:
       - name: Check pkg
         run: |
           set -x
-          TARGET_VERSION=${{ steps.info.outputs.TARGET_VERSION }}
           ls -al pkg
           7z x pkg/ruby-${TARGET_VERSION}.zip ruby-${TARGET_VERSION}/revision.h
           cat ruby-${TARGET_VERSION}/revision.h
@@ -72,7 +67,6 @@ jobs:
       - name: Upload s3
         run: |
           set -x
-          TARGET_VERSION=${{ steps.info.outputs.TARGET_VERSION }}
           for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
             aws s3 cp "pkg/ruby-${TARGET_VERSION}$ext" "s3://ftp.r-l.o/pub/tmp/ruby-${TARGET_VERSION}-draft$ext" --no-progress
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}-draft$ext"
@@ -128,15 +122,11 @@ jobs:
     steps:
       - name: Set TARGET_VERSION
         run: |
-          set -x
-          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          echo "::set-output name=GITHUB_REF_RUBY_RUBY::$GITHUB_REF"
+          TARGET_VERSION="${{ github.event.inputs.TARGET_VERSION }}"
+          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
           echo "::set-output name=TARGET_VERSION::$TARGET_VERSION"
         shell: bash
         id: info
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
 
       - run: env | sort
       - name: Dump GitHub context
@@ -263,15 +253,11 @@ jobs:
     steps:
       - name: Set TARGET_VERSION
         run: |
-          set -x
-          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          echo "::set-output name=GITHUB_REF_RUBY_RUBY::$GITHUB_REF"
+          TARGET_VERSION="${{ github.event.inputs.TARGET_VERSION }}"
+          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
           echo "::set-output name=TARGET_VERSION::$TARGET_VERSION"
         shell: bash
         id: info
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
 
       - run: env | sort
       - name: Dump GitHub context
@@ -384,15 +370,11 @@ jobs:
     steps:
       - name: Set TARGET_VERSION
         run: |
-          set -x
-          GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-          TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          echo "::set-output name=GITHUB_REF_RUBY_RUBY::$GITHUB_REF"
+          TARGET_VERSION="${{ github.event.inputs.TARGET_VERSION }}"
+          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
           echo "::set-output name=TARGET_VERSION::$TARGET_VERSION"
         shell: bash
         id: info
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
 
       - run: env | sort
       - name: Dump GitHub context
