@@ -34,6 +34,7 @@ jobs:
           if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<=2 && minor<7)"; then
             # e.g. GITHUB_REF=refs/tags/draft/v2_6_4 -> TARGET_VERSION=2.6.4
             ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
+            echo PACKAGE_EXTS=".tar.gz .tar.bz2 .tar.xz .zip" >> $GITHUB_ENV
           else
             # e.g. GITHUB_REF=refs/tags/draft/v2_7_0_preview1 -> TARGET_VERSION=2.7.0-preview1
             pushd ruby
