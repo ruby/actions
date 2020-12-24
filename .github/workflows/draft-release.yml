@@ -210,6 +210,8 @@ jobs:
           chmod -v a-w $HOME $HOME/.config
           sudo chmod -R a-w /usr/share
           sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
+      - name: mkdir ~/.local
+        run: sudo mkdir -p $HOME/.local && chown $USER $HOME/.local
       - name: Set ENV
         run: |
           echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
