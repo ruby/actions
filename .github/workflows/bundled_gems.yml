@@ -1,0 +1,44 @@
+name: "Update bundled_gems"
+
+on:
+  schedule:
+    - cron: '10 10 * * *'
+
+jobs:
+  Update-bundled_gems:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install libraries
+      run: |
+        set -x
+        sudo apt-get update -q || :
+        sudo apt-get install --no-install-recommends -q -y git ruby
+      shell: bash
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Checkout ruby/ruby
+      run: git clone --single-branch --depth=1 https://github.com/ruby/ruby ruby
+      shell: bash
+
+    - name: Update
+      run: |
+        ruby -rrubygems tool/update-bundled_gems.rb gems/bundled_gems |
+        tool/ifchange gems/bundled_gems -
+        git diff --no-ext-diff --ignore-submodules --exit-code
+
+    - uses: k0kubun/action-slack@v2.0.0
+      with:
+        payload: |
+          {
+            "attachments": [{
+              "text": "${{ job.status }}: bundled_gems <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+              "color": "danger"
+            }]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+      if: failure()
