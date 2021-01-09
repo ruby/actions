@@ -29,6 +29,7 @@ jobs:
         ruby -rrubygems tool/update-bundled_gems.rb gems/bundled_gems |
         tool/ifchange gems/bundled_gems -
         git diff --no-ext-diff --ignore-submodules --exit-code
+      working-directory: ruby
 
     - uses: k0kubun/action-slack@v2.0.0
       with:
