@@ -111,6 +111,13 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/*.tar.xz
+      - name: Apply patch
+        run: |
+          if curl -sSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_6.diff; then
+            cd snapshot-*/
+            patch -p0 < ../snapshot-ruby_2_6.diff
+          fi
+        shell: bash
       - name: Update spec
         run: |
           set -x
@@ -231,6 +238,13 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/*.tar.xz
+      - name: Apply patch
+        run: |
+          if curl -sSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_6.diff; then
+            cd snapshot-*/
+            patch -p0 < ../snapshot-ruby_2_6.diff
+          fi
+        shell: bash
       - name: Update spec
         run: |
           set -x
@@ -335,6 +349,13 @@ jobs:
           path: pkg
       - name: Extract
         run: 7z x pkg/*.zip
+      - name: Apply patch
+        run: |
+          if curl -sSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_6.diff; then
+            cd snapshot-*/
+            patch -p0 < ../snapshot-ruby_2_6.diff
+          fi
+        shell: bash
       - name: configure
         run: |
           cd snapshot-*
