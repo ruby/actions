@@ -115,7 +115,7 @@ jobs:
         run: tar xf pkg/*.tar.xz
       - name: Apply patch
         run: |
-          if curl -sSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_5.diff; then
+          if curl -fsSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_5.diff; then
             cd snapshot-*/
             patch -p0 < ../snapshot-ruby_2_5.diff
           fi
@@ -245,7 +245,7 @@ jobs:
         run: tar xf pkg/*.tar.xz
       - name: Apply patch
         run: |
-          if curl -sSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_5.diff; then
+          if curl -fsSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_5.diff; then
             cd snapshot-*/
             patch -p0 < ../snapshot-ruby_2_5.diff
           fi
@@ -356,7 +356,7 @@ jobs:
         run: 7z x pkg/*.zip
       - name: Apply patch
         run: |
-          if curl -sSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_5.diff; then
+          if curl -fsSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_5.diff; then
             cd snapshot-*/
             patch -p0 < ../snapshot-ruby_2_5.diff
           fi
