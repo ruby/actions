@@ -178,7 +178,7 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        test_task: [check, test-bundler, test-bundled-gems]
+        test_task: [check, test-bundled-gems]
         os: [macos-latest]
       fail-fast: false
     runs-on: ${{ matrix.os }}
