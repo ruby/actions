@@ -14,8 +14,8 @@ jobs:
           set -x
           sudo sed /etc/apt/sources.list -e "s/^# deb-src/deb-src/g" -i
           sudo apt-get update -q || :
-          sudo apt-get install --no-install-recommends -q -y ruby2.5 doxygen graphviz
-          sudo apt-get build-dep -q -y ruby2.5
+          sudo apt-get install --no-install-recommends -q -y ruby2.7 doxygen graphviz
+          sudo apt-get build-dep -q -y ruby2.7
 
       - name: Checkout ruby/ruby
         run: |
