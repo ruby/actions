@@ -146,7 +146,7 @@ jobs:
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: Tests
-        run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
+        run: cd snapshot-*/ && env -u XDG_CONFIG_HOME make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
       # leaked-globals since 2.7
