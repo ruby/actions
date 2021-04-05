@@ -2,7 +2,7 @@ name: snapshot-master
 
 on:
   schedule:
-    - cron: '30 12 * * *' # Daily at 12:30 UTC
+    - cron: '30 18 * * *' # Daily at 18:30 UTC
   repository_dispatch:
     types:
       - "make-snapshot"
