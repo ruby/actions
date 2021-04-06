@@ -14,15 +14,11 @@ jobs:
     env:
       archname: snapshot-ruby_2_6
     steps:
-      - name: Install libraries
-        run: |
-          set -x
-          sudo apt-get update -q || :
-          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
-      - name: Checkout ruby/ruby for tool/make-snapshot
-        run: git clone --depth=1 https://github.com/ruby/ruby ruby
-      - name: Make snapshot
-        run: ruby ruby/tool/make-snapshot -archname=$archname -svn pkg 2.6
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/make-snapshot
+        with:
+          version: 2.6
+          fetch-branch: ruby_2_6
       - uses: actions/upload-artifact@master
         with:
           name: Packages
@@ -112,21 +108,6 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/*.tar.xz
-      - name: Apply patch
-        run: |
-          if curl -fsSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_6.diff; then
-            cd snapshot-*/
-            patch -p0 < ../snapshot-ruby_2_6.diff
-          fi
-        shell: bash
-      - name: Update spec
-        run: |
-          set -x
-          cd snapshot-*/
-          rm -rf spec/mspec spec/ruby
-          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
-          git clone --depth=1 https://github.com/ruby/spec spec/ruby
-        if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
           set -x
@@ -151,9 +132,12 @@ jobs:
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
       - name: Fixed world writable dirs
         run: |
+          mkdir $HOME/.gem
           chmod -v a-w $HOME $HOME/.config
           sudo chmod -R a-w /usr/share
           sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
+      - name: Create ~/.local
+        run: ls -al $HOME && sudo install -o $USER -d $HOME/.local
       - name: Set ENV
         run: |
           echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
@@ -181,6 +165,10 @@ jobs:
       - name: ruby -v
         run: ruby -v
         if: matrix.test_task == 'check'
+      - name: Show .gem
+        run: find $HOME/.gem -ls
+      - name: Show .local
+        run: find $HOME/.local -ls
       - uses: k0kubun/action-slack@v2.0.0
         with:
           payload: |
@@ -235,21 +223,6 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/*.tar.xz
-      - name: Apply patch
-        run: |
-          if curl -fsSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_6.diff; then
-            cd snapshot-*/
-            patch -p0 < ../snapshot-ruby_2_6.diff
-          fi
-        shell: bash
-      - name: Update spec
-        run: |
-          set -x
-          cd snapshot-*/
-          rm -rf spec/mspec spec/ruby
-          git clone --depth=1 https://github.com/ruby/mspec spec/mspec
-          git clone --depth=1 https://github.com/ruby/spec spec/ruby
-        if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
           with_retry () {
@@ -346,13 +319,6 @@ jobs:
           path: pkg
       - name: Extract
         run: 7z x pkg/*.zip
-      - name: Apply patch
-        run: |
-          if curl -fsSLO https://raw.githubusercontent.com/ruby/actions/master/patches/snapshot-ruby_2_6.diff; then
-            cd snapshot-*/
-            patch -p0 < ../snapshot-ruby_2_6.diff
-          fi
-        shell: bash
       - name: configure
         run: |
           cd snapshot-*
