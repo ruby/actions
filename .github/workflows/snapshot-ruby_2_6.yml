@@ -262,7 +262,7 @@ jobs:
         run: |
           echo "JOBS=-j$((1 + $(sysctl -n hw.activecpu)))" >> $GITHUB_ENV
       - name: configure
-        run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
+        run: cd snapshot-*/ && env CFLAGS="-Wno-error=implicit-function-declaration" ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: make check
