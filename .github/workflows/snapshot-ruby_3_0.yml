@@ -112,7 +112,7 @@ jobs:
         run: |
           set -x
           git clone --depth=1 https://github.com/ruby/ruby ruby
-          cd ruby-*/
+          cd snapshot-*/
           rm -rf spec/mspec spec/ruby
           mv -v ../ruby/spec/mspec ../ruby/spec/ruby spec
         if: matrix.test_task == 'check'
@@ -232,7 +232,7 @@ jobs:
         run: |
           set -x
           git clone --depth=1 https://github.com/ruby/ruby ruby
-          cd ruby-*/
+          cd snapshot-*/
           rm -rf spec/mspec spec/ruby
           mv -v ../ruby/spec/mspec ../ruby/spec/ruby spec
         if: matrix.test_task == 'check'
