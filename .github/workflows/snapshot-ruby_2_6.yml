@@ -153,8 +153,17 @@ jobs:
         run: cd snapshot-*/ && ./configure
       - name: make
         run: cd snapshot-*/ && make $JOBS
-      - name: make check
-        run: cd snapshot-*/ && env -u XDG_CONFIG_HOME make $JOBS check TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+      - name: make test
+        run: cd snapshot-*/ && env -u XDG_CONFIG_HOME make $JOBS test TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        if: matrix.test_task == 'check'
+      - name: make test-testframework
+        run: cd snapshot-*/ && env -u XDG_CONFIG_HOME make $JOBS test-testframework TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        if: matrix.test_task == 'check'
+      - name: make test-almost
+        run: cd snapshot-*/ && env -u XDG_CONFIG_HOME make $JOBS test-almost TESTOPTS="-q --tty=no" MSPECOPT="-ff"
+        if: matrix.test_task == 'check'
+      - name: make test-spec
+        run: cd snapshot-*/ && env -u XDG_CONFIG_HOME make $JOBS test-spec TESTOPTS="-q --tty=no" MSPECOPT="-ff"
         if: matrix.test_task == 'check'
       - name: make test-bundler
         run: cd snapshot-*/ && make $JOBS test-bundler TESTOPTS="-q --tty=no" MSPECOPT="-ff"
