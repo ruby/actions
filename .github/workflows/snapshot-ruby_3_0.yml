@@ -24,7 +24,6 @@ jobs:
         with:
           version: "3.0"
           fetch-branch: "ruby_3_0"
-          ruby-patch-url: "${{ github.event.inputs.RUBY_PATCH_URL }}"
       - uses: actions/upload-artifact@master
         with:
           name: Packages
@@ -114,6 +113,16 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/*.tar.xz
+      - name: Apply patch
+        run: |
+          set -x
+          curl -sSL "${RUBY_PATCH_URL}" -o ruby.patch
+          cd snapshot-*/
+          git apply ../ruby.patch
+        shell: bash
+        env:
+          RUBY_PATCH_URL: "${{ github.event.inputs.RUBY_PATCH_URL }}"
+        if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
       - name: Update spec
         run: |
           set -x
@@ -234,6 +243,16 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/*.tar.xz
+      - name: Apply patch
+        run: |
+          set -x
+          curl -sSL "${RUBY_PATCH_URL}" -o ruby.patch
+          cd snapshot-*/
+          git apply ../ruby.patch
+        shell: bash
+        env:
+          RUBY_PATCH_URL: "${{ github.event.inputs.RUBY_PATCH_URL }}"
+        if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
       - name: Update spec
         run: |
           set -x
@@ -337,6 +356,16 @@ jobs:
           path: pkg
       - name: Extract
         run: 7z x pkg/*.zip
+      - name: Apply patch
+        run: |
+          set -x
+          curl -sSL "${RUBY_PATCH_URL}" -o ruby.patch
+          cd snapshot-*/
+          git apply ../ruby.patch
+        shell: bash
+        env:
+          RUBY_PATCH_URL: "${{ github.event.inputs.RUBY_PATCH_URL }}"
+        if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
       - name: configure
         run: |
           cd snapshot-*
