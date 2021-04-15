@@ -19,3 +19,11 @@ This repository is automation tool for ruby workflows.
 # Documentation for [release managers](https://bugs.ruby-lang.org/projects/ruby/wiki/ReleaseEngineering)
 
 See <https://bugs.ruby-lang.org/projects/ruby/wiki/HowToReleaseJa>
+
+# How to run tests of snapshot tarball with patch
+
+* Open <https://github.com/ruby/actions/actions/workflows/snapshot-master.yml> or `snapshot-ruby_X_Y`
+* Click `Run workflow` (right of `This workflow has a workflow_dispatch event trigger.`)
+* DO NOT CHANGE: Use workflow from Branch: `master` means [ruby/actions](https://github.com/ruby/actions)'s master branch
+* Input diff URL to `Patch URL:` (for example: <https://patch-diff.githubusercontent.com/raw/ruby/ruby/pull/4369.diff> (redirect from <https://github.com/raw/ruby/ruby/pull/4369.diff>)) (Workflow downloads it and uses by `git apply`)
+* Click `Run workflow`
