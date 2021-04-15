@@ -11,6 +11,9 @@ inputs:
   fetch-branch:
     description: 'fetch branch'
     required: false
+  ruby-patch-url:
+    description: 'Patch URL'
+    required: false
 
 runs:
   using: "composite"
@@ -32,6 +35,17 @@ runs:
         [ -n "${{ inputs.fetch-branch }}" ] && git fetch origin '+${{ inputs.fetch-branch }}:${{ inputs.fetch-branch }}'
         git fetch origin '+refs/notes/commits:refs/notes/commits'
         git fetch origin '+refs/notes/log-fix:refs/notes/log-fix'
+      shell: bash
+    - name: Apply patch
+      run: |
+        set -x
+        if [ -n "${RUBY_PATCH_URL}" ]; then
+          curl -sSL "${RUBY_PATCH_URL}" -o ruby.patch
+          cd ruby
+          git apply ../ruby.patch
+        fi
+      env:
+        RUBY_PATCH_URL: "${{ inputs.ruby-patch-url }}"
       shell: bash
     - name: Make snapshot
       run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby pkg ${{ inputs.version }}

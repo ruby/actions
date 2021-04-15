@@ -7,6 +7,11 @@ on:
     types:
       - "make-snapshot"
       - "snapshot-ruby_2_7"
+  workflow_dispatch:
+    inputs:
+      RUBY_PATCH_URL:
+        description: Patch URL
+        required: false
 
 jobs:
   make-snapshot:
@@ -19,6 +24,7 @@ jobs:
         with:
           version: 2.7
           fetch-branch: ruby_2_7
+          ruby-patch-url: "${{ github.event.inputs.RUBY_PATCH_URL }}"
       - uses: actions/upload-artifact@master
         with:
           name: Packages
