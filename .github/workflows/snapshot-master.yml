@@ -326,7 +326,9 @@ jobs:
           vcpkg --triplet x64-windows install readline zlib
       - name: Install libraries with chocolatey
         run: |
-          choco install --no-progress openssl winflexbison3
+          Choco-Install -PackageName openssl
+          Choco-Install -PackageName winflexbison3
+        shell: pwsh
       - uses: actions/download-artifact@master
         with:
           name: Packages
