@@ -29,7 +29,7 @@ jobs:
           chmod -v a-w $HOME $HOME/.config
           sudo chmod -R a-w /usr/share
           sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
-      - run: cd ruby && autoconf
+      - run: cd ruby && ./autogen.sh
       - name: Configure with gcov
         run: cd ruby && ./configure --enable-gcov CC=gcc
       - name: Setup coverage tools

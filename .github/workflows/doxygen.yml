@@ -23,7 +23,7 @@ jobs:
           git rev-parse HEAD
           git log
 
-      - run: autoconf
+      - run: ./autogen.sh
       - run: ./configure
       - run: make Doxyfile
       - run: doxygen
