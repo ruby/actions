@@ -227,7 +227,14 @@ jobs:
       - name: make
         run: cd ruby-*/ && make $JOBS
       - name: Tests
-        run: cd ruby-*/ && env -u XDG_CONFIG_HOME make $JOBS -s ${{ matrix.test_task }}
+        run: |
+          case "$TARGET_VERSION" in
+            2.6.*)
+              test "${{ matrix.test_task }}" = test-bundler && exit
+              test "${{ matrix.test_task }}" = test-bundled-gems && exit
+              ;;
+          esac
+          cd ruby-*/ && env -u XDG_CONFIG_HOME make $JOBS -s ${{ matrix.test_task }}
         env:
           MSPECOPT: "-ff" # not using `-j` because sometimes `mspec -j` silently dies (for ruby < 2.7)
           RUBY_TESTOPTS: "-q --tty=no"
@@ -346,7 +353,14 @@ jobs:
       - name: make
         run: cd ruby-*/ && make $JOBS
       - name: Tests
-        run: cd ruby-*/ && make $JOBS -s ${{ matrix.test_task }}
+        run: |
+          case "$TARGET_VERSION" in
+            2.6.*)
+              test "${{ matrix.test_task }}" = test-bundler && exit
+              test "${{ matrix.test_task }}" = test-bundled-gems && exit
+              ;;
+          esac
+          cd ruby-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           MSPECOPT: "-ff" # not using `-j` because sometimes `mspec -j` silently dies (for ruby < 2.7)
           RUBY_TESTOPTS: "-q --tty=no"
