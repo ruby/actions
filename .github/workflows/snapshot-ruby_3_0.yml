@@ -207,7 +207,7 @@ jobs:
     strategy:
       matrix:
         test_task: [check, test-bundler, test-bundled-gems]
-        os: [macos-latest]
+        os: [macos-10.15, macos-11]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
