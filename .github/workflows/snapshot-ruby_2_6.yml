@@ -220,6 +220,9 @@ jobs:
       matrix:
         test_task: [check, test-bundler, test-bundled-gems]
         os: [macos-10.15, macos-11]
+        exclude:
+          - test_task: check
+            os: macos-11
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
