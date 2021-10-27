@@ -299,6 +299,9 @@ jobs:
             continue-on-error: true
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: cmd
     name: VisualStudio ${{ matrix.vs }}
     env:
       GITPULLOPTIONS: --no-tags origin ${{github.ref}}
