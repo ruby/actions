@@ -403,6 +403,8 @@ jobs:
         test_task: [test]
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    env:
+      PATCH: C:\msys64\usr\bin\patch.exe
     steps:
       - name: Set TARGET_VERSION
         run: |
