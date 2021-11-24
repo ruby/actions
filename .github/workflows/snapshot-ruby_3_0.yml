@@ -150,6 +150,7 @@ jobs:
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
       - name: Fixed world writable dirs
         run: |
+          mkdir $HOME/.gem
           chmod -v a-w $HOME $HOME/.config
           sudo chmod -R a-w /usr/share
           sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
