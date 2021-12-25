@@ -1,4 +1,4 @@
-name: snapshot-ruby_3_0
+name: snapshot-ruby_3_1
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   repository_dispatch:
     types:
       - "make-snapshot"
-      - "snapshot-ruby_3_0"
+      - "snapshot-ruby_3_1"
   workflow_dispatch:
     inputs:
       RUBY_PATCH_URL:
@@ -17,13 +17,13 @@ jobs:
   make-snapshot:
     runs-on: ubuntu-latest
     env:
-      archname: snapshot-ruby_3_0
+      archname: snapshot-ruby_3_1
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/make-snapshot
         with:
-          version: "3.0"
-          fetch-branch: "ruby_3_0"
+          version: "3.1"
+          fetch-branch: "ruby_3_1"
       - uses: actions/upload-artifact@master
         with:
           name: Packages
@@ -71,7 +71,7 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        test_task: [check, test-bundler, test-bundled-gems]
+        test_task: [check, test-bundler-parallel, test-bundled-gems]
         os: [ubuntu-20.04, ubuntu-18.04]
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -147,15 +147,13 @@ jobs:
             *)
               ;;
           esac
-          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
       - name: Fixed world writable dirs
         run: |
-          mkdir $HOME/.gem
+          mkdir $HOME/.local
           chmod -v a-w $HOME $HOME/.config
           sudo chmod -R a-w /usr/share
           sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
-      - name: Create ~/.local
-        run: ls -al $HOME && sudo install -o $USER -d $HOME/.local
       - name: Set ENV
         run: |
           echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
@@ -164,7 +162,7 @@ jobs:
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: Tests
-        run: cd snapshot-*/ && env -u XDG_CONFIG_HOME make $JOBS -s ${{ matrix.test_task }}
+        run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
       # leaked-globals since 2.7
@@ -180,8 +178,6 @@ jobs:
       - name: ruby -v
         run: ruby -v
         if: matrix.test_task == 'check'
-      - name: Show .gem
-        run: find $HOME/.gem -ls
       - name: Show .local
         run: find $HOME/.local -ls
       - uses: k0kubun/action-slack@v2.0.0
@@ -201,7 +197,7 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        test_task: [check, test-bundler, test-bundled-gems]
+        test_task: [check, test-bundler-parallel, test-bundled-gems]
         os: [macos-10.15, macos-11]
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -264,7 +260,7 @@ jobs:
           set -x
           with_retry brew update
           with_retry brew upgrade
-          with_retry brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
+          with_retry brew install gmp libffi openssl@1.1 zlib autoconf automake libtool readline
       - name: Set ENV
         run: |
           echo "JOBS=-j$((1 + $(sysctl -n hw.activecpu)))" >> $GITHUB_ENV
@@ -276,7 +272,7 @@ jobs:
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
-          TEST_BUNDLED_GEMS_ALLOW_FAILURES: "rexml"
+          TEST_BUNDLED_GEMS_ALLOW_FAILURES: "xmlrpc,rss,rexml"
       # leaked-globals since 2.7
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
@@ -307,11 +303,24 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        os: [windows-2019]
-        vs: [2019]
-        test_task: [test]
+        include:
+          - vs: 2019
+            os: windows-2019
+            vcvars: '"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"'
+          - vs: 2022
+            os: windows-2022
+            vcvars: '"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"'
+            continue-on-error: true
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: cmd
+    name: VisualStudio ${{ matrix.vs }}
+    env:
+      GITPULLOPTIONS: --no-tags origin ${{github.ref}}
+      VCVARS: ${{ matrix.vcvars }}
+      PATCH: C:\msys64\usr\bin\patch.exe
     steps:
       - run: env | sort
       - name: Dump GitHub context
@@ -339,11 +348,40 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
+      - run: md build
+        working-directory:
+      - uses: msys2/setup-msys2@v2
+        id: setup-msys2
+        with:
+          update: true
+          install: >-
+            patch
+        if: ${{ matrix.os != 'windows-2019' }}
+      - name: patch path
+        shell: msys2 {0}
+        run: echo PATCH=$(cygpath -wa $(command -v patch)) >> $GITHUB_ENV
+        if: ${{ steps.setup-msys2.outcome == 'success' }}
+      - uses: actions/cache@v2
+        with:
+          path: C:\vcpkg\downloads
+          key: ${{ runner.os }}-vcpkg-download-${{ matrix.os }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-download-${{ matrix.os }}-
+            ${{ runner.os }}-vcpkg-download-
       - name: Install libraries with vcpkg
         run: |
           vcpkg --triplet x64-windows install readline zlib
+      - uses: actions/cache@v2
+        with:
+          path: C:\Users\runneradmin\AppData\Local\Temp\chocolatey
+          key: ${{ runner.os }}-chocolatey-${{ matrix.os }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-chocolatey-${{ matrix.os }}-
+            ${{ runner.os }}-chocolatey-
       - name: Install libraries with chocolatey
         run: |
+          # Using Choco-Install for retries, but it doesn't detect failures properly
+          # if you pass multiple package names in a single command.
           Choco-Install -PackageName openssl
           Choco-Install -PackageName winflexbison3
         shell: pwsh
@@ -363,36 +401,59 @@ jobs:
         env:
           RUBY_PATCH_URL: "${{ github.event.inputs.RUBY_PATCH_URL }}"
         if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
-      - name: configure
+      - name: setup env
+        # %TEMP% is inconsistent with %TMP% and test-all expects they are consistent.
+        # https://github.com/actions/virtual-environments/issues/712#issuecomment-613004302
+        run: |
+          set | C:\msys64\usr\bin\sort > old.env
+          call %VCVARS%
+          set TMP=%USERPROFILE%\AppData\Local\Temp
+          set TEMP=%USERPROFILE%\AppData\Local\Temp
+          set | C:\msys64\usr\bin\sort > new.env
+          C:\msys64\usr\bin\comm -13 old.env new.env >> %GITHUB_ENV%
+          del *.env
+      - name: Configure
         run: |
           cd snapshot-*
-          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          win32/configure.bat --disable-install-doc --without-ext=+,dbm,gdbm --enable-bundled-libffi --with-opt-dir=C:/vcpkg/installed/x64-windows
-        shell: cmd
+          win32/configure.bat --disable-install-doc --enable-bundled-libffi --with-opt-dir=C:/vcpkg/installed/x64-windows --with-openssl-dir="C:/Program Files/OpenSSL-Win64"
       - name: nmake
         run: |
           cd snapshot-*
-          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          set YACC=win_bison
+          echo ^#^#[group]nmake up
           nmake up
+          echo ^#^#[endgroup]
+          echo ^#^#[group]nmake
           nmake
-        shell: cmd
-      - name: nmake test
-        run: |
-          cd snapshot-*
-          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          nmake ${{ matrix.test_task }}
-        shell: cmd
+          echo ^#^#[endgroup]
+        env:
+          YACC: win_bison
       - name: ruby -v
         run: |
           cd snapshot-*
           .\ruby -v
+      - name: nmake test
+        timeout-minutes: 5
+        run: |
+          cd snapshot-*
+          nmake test
+      - name: nmake test-all
+        timeout-minutes: 60
+        run: |
+          cd snapshot-*
+          nmake test-all TESTOPTS="-j%NUMBER_OF_PROCESSORS% --job-status=normal"
+        continue-on-error: ${{ matrix.continue-on-error || false }}
+      - name: nmake test-spec
+        timeout-minutes: 10
+        run: |
+          cd snapshot-*
+          nmake test-spec
+        continue-on-error: ${{ matrix.continue-on-error || false }}
       - uses: k0kubun/action-slack@v2.0.0
         with:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }

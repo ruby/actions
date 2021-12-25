@@ -129,7 +129,7 @@ jobs:
               # test-bundled-gems-fetch requires git
               unset APT_INSTALL_GIT
               ;;
-            test-bundler-parallel)
+            test-bundler*)
               # avoid Bundler::Source::Git::GitNotInstalledError
               unset APT_INSTALL_GIT
               ;;
