@@ -39,7 +39,7 @@ jobs:
       - name: Upload s3
         run: |
           set -x
-          for ext in .tar.gz .tar.bz2 .tar.xz .zip; do
+          for ext in .tar.gz .tar.xz .zip; do
             aws s3 cp "pkg/$archname$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/$archname$ext" --no-progress
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/$archname$ext"
           done
