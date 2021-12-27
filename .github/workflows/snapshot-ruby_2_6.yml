@@ -24,6 +24,7 @@ jobs:
         with:
           version: 2.6
           fetch-branch: ruby_2_6
+          generate-tar-bz2: yes
       - uses: actions/upload-artifact@master
         with:
           name: Packages
