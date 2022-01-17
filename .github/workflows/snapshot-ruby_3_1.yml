@@ -272,7 +272,6 @@ jobs:
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
-          TEST_BUNDLED_GEMS_ALLOW_FAILURES: "xmlrpc,rss,rexml"
       # leaked-globals since 2.7
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
