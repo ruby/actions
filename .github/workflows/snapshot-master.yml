@@ -241,12 +241,12 @@ jobs:
           set -x
           with_retry brew update
           with_retry brew upgrade
-          with_retry brew install gmp libffi openssl@1.1 zlib autoconf automake libtool readline
+          with_retry brew install gmp libffi openssl@1.1 zlib autoconf automake libtool readline libyaml
       - name: Set ENV
         run: |
           echo "JOBS=-j$((1 + $(sysctl -n hw.activecpu)))" >> $GITHUB_ENV
       - name: configure
-        run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
+        run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline) --with-libyaml-dir=$(brew --prefix libyaml)
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: Tests
