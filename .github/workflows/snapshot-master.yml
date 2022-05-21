@@ -152,7 +152,7 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: Remove .bundle for workaround
         # ./tool/test-bundled-gems.rb:10:in `realpath': No such file or directory @ realpath_rec - /home/runner/work/actions/actions/snapshot-master/.bundle/bin/rake (Errno::ENOENT)
-	# from ./tool/test-bundled-gems.rb:10:in `<main>'
+        # from ./tool/test-bundled-gems.rb:10:in `<main>'
         run: [ ! -e /home/runner/work/actions/actions/snapshot-master/.bundle/bin/rake ] && rm -rf /home/runner/work/actions/actions/snapshot-master/.bundle
         if: matrix.test_task == 'test-bundled-gems'
       - name: Tests
@@ -256,7 +256,7 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: Remove .bundle for workaround
         # ./tool/test-bundled-gems.rb:10:in `realpath': Not a directory @ rb_check_realpath_internal - ./tool/test-bundled-gems.rb/../../.bundle/bin/rake (Errno::ENOTDIR)
-	# from ./tool/test-bundled-gems.rb:10:in `<main>'
+        # from ./tool/test-bundled-gems.rb:10:in `<main>'
         run: cd snapshot-*/ && [ ! -e .bundle/bin/rake ] && rm -rf .bundle
         if: matrix.test_task == 'test-bundled-gems'
       - name: Tests
