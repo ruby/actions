@@ -50,7 +50,7 @@ def parse_truffleruby(json)
 end
 
 def upload_index(bucket)
-  STDERR.puts "Upload pub/ruby/index.txt"
+  STDERR.puts "Upload misc/ci_versions/*.json"
   %w(cruby.json cruby-jruby.json cruby-truffleruby.json all.json).each do |file|
     bucket.object("misc/ci_versions/#{file}").upload_file(file)
   end
