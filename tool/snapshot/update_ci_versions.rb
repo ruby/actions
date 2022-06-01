@@ -50,15 +50,15 @@ def parse_truffleruby(json)
 end
 
 def upload_index(bucket)
-  STDERR.puts "Upload misc/ci_versions/*.json"
+  STDERR.puts "Upload pub/misc/ci_versions/*.json"
   %w(cruby.json cruby-jruby.json cruby-truffleruby.json all.json).each do |file|
-    bucket.object("misc/ci_versions/#{file}").upload_file(file)
+    bucket.object("pub/misc/ci_versions/#{file}").upload_file(file)
   end
 end
 
 def purge_fastly
   %w(cruby.json cruby-jruby.json cruby-truffleruby.json all.json).each do |file|
-    cmd = %W(curl -X PURGE -H Fastly-Soft-Purge:1 https://cache.ruby-lang.org/misc/ci_versions/#{file})
+    cmd = %W(curl -X PURGE -H Fastly-Soft-Purge:1 https://cache.ruby-lang.org/pub/misc/ci_versions/#{file})
     STDERR.puts "Executing #{cmd}"
     system(*cmd)
   end
