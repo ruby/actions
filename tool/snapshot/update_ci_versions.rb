@@ -47,8 +47,18 @@ def parse_truffleruby(json)
   [json["truffleruby"].reject{|v| v == "head"}.last, "head"].map{|v| "truffleruby-" + v }
 end
 
+def upload_index(bucket)
+  STDERR.puts "Upload pub/ruby/index.txt"
+  %w(cruby.json cruby-jruby.json cruby-truffleruby.json all.json).each do |file|
+    bucket.object("misc/ci_versions/#{file}").upload_file(file)
+  end
+end
+
 def update_versions
+  s3 = Aws::S3::Resource.new(region:'us-east-1')
+  bucket = s3.bucket('ftp.r-l.o')
   create_files
+  upload_index(bucket)
 end
 
 if __FILE__ == $0
