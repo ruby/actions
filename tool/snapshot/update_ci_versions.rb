@@ -54,11 +54,20 @@ def upload_index(bucket)
   end
 end
 
+def purge_fastly
+  %w(cruby.json cruby-jruby.json cruby-truffleruby.json all.json).each do |file|
+    cmd = %W(curl -X PURGE -H Fastly-Soft-Purge:1 https://cache.ruby-lang.org/misc/ci_versions/#{file})
+    STDERR.puts "Executing #{cmd}"
+    system(*cmd)
+  end
+end
+
 def update_versions
   s3 = Aws::S3::Resource.new(region:'us-east-1')
   bucket = s3.bucket('ftp.r-l.o')
   create_files
   upload_index(bucket)
+  purge_fastly
 end
 
 if __FILE__ == $0
