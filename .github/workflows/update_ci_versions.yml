@@ -1,0 +1,44 @@
+name: update_ci_versions
+
+on:
+  schedule:
+    - cron: '27 16 * * *'
+  repository_dispatch:
+    types: "update_ci_versions"
+
+jobs:
+  update_ci_versions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q || :
+          sudo apt-get install --no-install-recommends -y ruby bundler
+      - name: Checkout ${{ github.repository }}
+        run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
+      - name: Bundle install
+        run: |
+          cd tool/snapshot
+          bundle config set path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+      - name: Update CI versions
+        run: |
+          cd tool/snapshot
+          bundle exec ruby update_ci_versions.rb
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+      - uses: k0kubun/action-slack@v2.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}> ",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
