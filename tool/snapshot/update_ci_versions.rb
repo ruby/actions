@@ -4,6 +4,8 @@
 require "json"
 require "open-uri"
 
+require 'aws-sdk-s3'
+
 RUBY_VERSIONS_FILE = "https://raw.githubusercontent.com/ruby/setup-ruby/master/ruby-builder-versions.json"
 
 def create_files
