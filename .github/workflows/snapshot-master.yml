@@ -252,7 +252,11 @@ jobs:
       - name: Remove .bundle for workaround
         # ./tool/test-bundled-gems.rb:10:in `realpath': Not a directory @ rb_check_realpath_internal - ./tool/test-bundled-gems.rb/../../.bundle/bin/rake (Errno::ENOTDIR)
         # from ./tool/test-bundled-gems.rb:10:in `<main>'
-        run: cd snapshot-*/ && [ ! -e .bundle/bin/rake ] && rm -rf .bundle
+        run: |
+          cd snapshot-*/
+          if [ ! -e .bundle/bin/rake ]; then
+            rm -rf .bundle
+          fi
         if: matrix.test_task == 'test-bundled-gems'
       - name: Tests
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
