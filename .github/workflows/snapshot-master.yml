@@ -140,7 +140,8 @@ jobs:
       - name: Fixed world writable dirs
         run: |
           mkdir -p $HOME/.local
-          chmod -v a-w $HOME $HOME/.config
+          # allow to write $HOME and check stats of HOME around tests (see below)
+          chmod -v a-w $HOME/.config
           sudo chmod -R a-w /usr/share
           sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
       - name: Set ENV
@@ -150,10 +151,17 @@ jobs:
         run: cd snapshot-*/ && ./configure
       - name: make
         run: cd snapshot-*/ && make $JOBS
+      - name: Save stats of HOME
+        run: |
+          cd snapshot-*/ && ./ruby -r pathname -r digest -e 'Pathname(Dir.home).each_child{|pn|st=pn.stat;p [pn.to_s,"%o"%st.mode,st.nlink,st.uid,st.gid,st.size,(Digest::SHA1.hexdigest(pn.read) if st.file?)]}' | sort > /tmp/stat-before-tests.txt
       - name: Tests
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
+      - name: Diff stats of HOME
+        run: |
+          cd snapshot-*/ && ./ruby -r pathname -r digest -e 'Pathname(Dir.home).each_child{|pn|st=pn.stat;p [pn.to_s,"%o"%st.mode,st.nlink,st.uid,st.gid,st.size,(Digest::SHA1.hexdigest(pn.read) if st.file?)]}' | sort > /tmp/stat-after-tests.txt
+          diff -u /tmp/stat-before-tests.txt /tmp/stat-after-tests.txt
       # leaked-globals since 2.7
       - name: Leaked Globals
         run: cd snapshot-*/ && make -s leaked-globals
