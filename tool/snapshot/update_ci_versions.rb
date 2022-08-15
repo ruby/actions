@@ -11,8 +11,8 @@ RUBY_VERSIONS_FILE = "https://raw.githubusercontent.com/ruby/setup-ruby/master/r
 def create_files
   json = JSON.parse(URI.open(RUBY_VERSIONS_FILE) {|f| f.read})
   cruby = parse_cruby(json)
-  jruby = parse_jruby(json)
-  truffleruby = parse_truffleruby(json)
+  jruby = ["jruby", "jruby-head"]
+  truffleruby = ["truffleruby", "truffleruby-head"]
 
   File.open('cruby.json', 'w') do |f|
     f.puts cruby.to_json
@@ -39,14 +39,6 @@ def parse_cruby(json)
   end
 
   json["ruby"].select{|v| v =~ /\d\.\d.\d$/}.map{|v| v[0..2]}.uniq.last(version_count) + ["head"]
-end
-
-def parse_jruby(json)
-  [json["jruby"].reject{|v| v == "head"}.last, "head"].map{|v| "jruby-" + v }
-end
-
-def parse_truffleruby(json)
-  [json["truffleruby"].reject{|v| v == "head"}.last, "head"].map{|v| "truffleruby-" + v }
 end
 
 def upload_index(bucket)
