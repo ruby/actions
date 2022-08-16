@@ -153,14 +153,44 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: Save stats of HOME
         run: |
-          cd snapshot-*/ && ./ruby -r pathname -r digest -e 'Pathname(Dir.home).each_child{|pn|st=pn.stat;p [pn.to_s,"%o"%st.mode,st.nlink,st.uid,st.gid,st.size,(Digest::SHA1.hexdigest(pn.read) if st.file?)]}' | sort > /tmp/stat-before-tests.txt
+          set -eux
+          cd snapshot-*/
+          cat >test.rb <<EOF
+          require 'pathname'
+          require 'digest'
+          out = []
+          Pathname(Dir.home).each_child do |pn|
+            st = pn.stat
+            out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, (Digest::SHA1.hexdigest(pn.read) if st.file?)].to_s
+          rescue
+            out << [pn.to_s, $!.inspect].to_s
+          end
+          puts out.sort
+          EOF
+          make runruby > /tmp/stat-before-tests.txt
+          rm -f test.rb
       - name: Tests
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
       - name: Diff stats of HOME
         run: |
-          cd snapshot-*/ && ./ruby -r pathname -r digest -e 'Pathname(Dir.home).each_child{|pn|st=pn.stat;p [pn.to_s,"%o"%st.mode,st.nlink,st.uid,st.gid,st.size,(Digest::SHA1.hexdigest(pn.read) if st.file?)]}' | sort > /tmp/stat-after-tests.txt
+          set -eux
+          cd snapshot-*/
+          cat >test.rb <<EOF
+          require 'pathname'
+          require 'digest'
+          out = []
+          Pathname(Dir.home).each_child do |pn|
+            st = pn.stat
+            out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, (Digest::SHA1.hexdigest(pn.read) if st.file?)].to_s
+          rescue
+            out << [pn.to_s, $!.inspect].to_s
+          end
+          puts out.sort
+          EOF
+          make runruby > /tmp/stat-after-tests.txt
+          rm -f test.rb
           diff -u /tmp/stat-before-tests.txt /tmp/stat-after-tests.txt
       # leaked-globals since 2.7
       - name: Leaked Globals
