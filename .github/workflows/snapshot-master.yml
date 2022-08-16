@@ -153,9 +153,9 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: Save stats of HOME
         run: |
-          set -eux
+          set -euxo pipefail
           cd snapshot-*/
-          cat >test.rb <<EOF
+          cat >test.rb <<'EOF'
           require 'pathname'
           require 'digest'
           out = []
@@ -175,9 +175,9 @@ jobs:
           RUBY_TESTOPTS: "-q --tty=no"
       - name: Diff stats of HOME
         run: |
-          set -eux
+          set -euxo pipefail
           cd snapshot-*/
-          cat >test.rb <<EOF
+          cat >test.rb <<'EOF'
           require 'pathname'
           require 'digest'
           out = []
