@@ -73,7 +73,7 @@ jobs:
     strategy:
       matrix:
         test_task: [check, test-bundler, test-bundled-gems]
-        os: [ubuntu-20.04, ubuntu-18.04]
+        os: [ubuntu-22.04, ubuntu-20.04]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
