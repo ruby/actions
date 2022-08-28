@@ -161,11 +161,16 @@ jobs:
           require 'pathname'
           require 'digest'
           out = []
-          Pathname(Dir.home).each_child do |pn|
-            st = pn.stat
-            out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, (Digest::SHA1.hexdigest(pn.read) if st.file?)].to_s
-          rescue
-            out << [pn.to_s, $!.inspect].to_s
+          [
+            Dir.home,
+            File.join(Dir.home, '.bundle'),
+          ].each do |dir|
+            Pathname(dir).each_child do |pn|
+              st = pn.stat
+              out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, (Digest::SHA1.hexdigest(pn.read) if st.file?)].to_s
+            rescue
+              out << [pn.to_s, $!.inspect].to_s
+            end
           end
           puts out.sort
           EOF
@@ -183,11 +188,16 @@ jobs:
           require 'pathname'
           require 'digest'
           out = []
-          Pathname(Dir.home).each_child do |pn|
-            st = pn.stat
-            out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, (Digest::SHA1.hexdigest(pn.read) if st.file?)].to_s
-          rescue
-            out << [pn.to_s, $!.inspect].to_s
+          [
+            Dir.home,
+            File.join(Dir.home, '.bundle'),
+          ].each do |dir|
+            Pathname(dir).each_child do |pn|
+              st = pn.stat
+              out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, (Digest::SHA1.hexdigest(pn.read) if st.file?)].to_s
+            rescue
+              out << [pn.to_s, $!.inspect].to_s
+            end
           end
           puts out.sort
           EOF
