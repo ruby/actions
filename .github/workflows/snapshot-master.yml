@@ -140,8 +140,8 @@ jobs:
       - name: Fixed world writable dirs
         run: |
           mkdir -p $HOME/.local
-          mkdir -p $HOME/.bundle
-          #chmod a-w $HOME/.bundle
+          mkdir -p $HOME/.bundle/cache
+          chmod a-w $HOME/.bundle/cache
           # allow to write $HOME and check stats of HOME around tests (see below)
           chmod -v a-w $HOME/.config
           sudo chmod -R a-w /usr/share
