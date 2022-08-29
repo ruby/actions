@@ -141,7 +141,7 @@ jobs:
         run: |
           mkdir -p $HOME/.local
           mkdir -p $HOME/.bundle/cache
-          chmod a-w $HOME/.bundle/cache
+          # chmod a-w $HOME
           # allow to write $HOME and check stats of HOME around tests (see below)
           chmod -v a-w $HOME/.config
           sudo chmod -R a-w /usr/share
