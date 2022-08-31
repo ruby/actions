@@ -141,6 +141,7 @@ jobs:
         run: |
           mkdir -p $HOME/.local
           mkdir -p $HOME/.bundle/cache
+          chmod a-w $HOME/.bundle
           # chmod a-w $HOME
           # allow to write $HOME and check stats of HOME around tests (see below)
           chmod -v a-w $HOME/.config
@@ -164,7 +165,6 @@ jobs:
           [
             Dir.home,
             File.join(Dir.home, '.bundle'),
-            File.join(Dir.home, '.bundle/cache'),
           ].each do |dir|
             Pathname(dir).each_child do |pn|
               st = pn.stat
@@ -192,7 +192,6 @@ jobs:
           [
             Dir.home,
             File.join(Dir.home, '.bundle'),
-            File.join(Dir.home, '.bundle/cache'),
           ].each do |dir|
             Pathname(dir).each_child do |pn|
               st = pn.stat
