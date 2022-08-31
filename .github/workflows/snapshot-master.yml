@@ -164,6 +164,7 @@ jobs:
           [
             Dir.home,
             File.join(Dir.home, '.bundle'),
+            File.join(Dir.home, '.bundle/cache'),
           ].each do |dir|
             Pathname(dir).each_child do |pn|
               st = pn.stat
@@ -191,6 +192,7 @@ jobs:
           [
             Dir.home,
             File.join(Dir.home, '.bundle'),
+            File.join(Dir.home, '.bundle/cache'),
           ].each do |dir|
             Pathname(dir).each_child do |pn|
               st = pn.stat
