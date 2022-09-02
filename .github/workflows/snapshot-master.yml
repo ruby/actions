@@ -164,7 +164,6 @@ jobs:
           out = []
           [
             Dir.home,
-            File.join(Dir.home, '.bundle'),
           ].each do |dir|
             Pathname(dir).each_child do |pn|
               st = pn.stat
@@ -191,7 +190,6 @@ jobs:
           out = []
           [
             Dir.home,
-            File.join(Dir.home, '.bundle'),
           ].each do |dir|
             Pathname(dir).each_child do |pn|
               st = pn.stat
