@@ -177,14 +177,6 @@ jobs:
           path: pkg
       - name: Extract
         run: tar xf pkg/ruby-*.tar.xz
-      - name: Update spec
-        run: |
-          set -x
-          git clone --depth=1 https://github.com/ruby/ruby ruby
-          cd ruby-*/
-          rm -rf spec/mspec spec/ruby
-          mv -v ../ruby/spec/mspec ../ruby/spec/ruby spec
-        if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
           set -x
