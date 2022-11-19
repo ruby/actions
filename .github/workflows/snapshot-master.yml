@@ -173,9 +173,11 @@ jobs:
               out << [pn.to_s, $!.inspect].to_s
             end
           end
-          puts out.sort
+          File.open("/tmp/stat-before-tests.txt", "w") do |io|
+            io.puts out.sort
+          end
           EOF
-          make runruby > /tmp/stat-before-tests.txt
+          make runruby
           rm -f test.rb
       - name: Tests
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
@@ -199,9 +201,11 @@ jobs:
               out << [pn.to_s, $!.inspect].to_s
             end
           end
-          puts out.sort
+          File.open("/tmp/stat-after-tests.txt", "w") do |io|
+            puts out.sort
+          end
           EOF
-          make runruby > /tmp/stat-after-tests.txt
+          make runruby
           rm -f test.rb
           diff -u /tmp/stat-before-tests.txt /tmp/stat-after-tests.txt
       # leaked-globals since 2.7
