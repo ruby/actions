@@ -37,8 +37,10 @@ runs:
         git fetch origin '+refs/notes/log-fix:refs/notes/log-fix'
       shell: bash
     - name: Make snapshot
-      run: >-
-        ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby
-        ${{ !inputs.generate-tar-bz2 && '-packages=gzip,xz,zip' }}
-        pkg ${{ inputs.version }}
+      run: |
+        if [ -n "${{ inputs.generate-tar-bz2 }}" ]; then
+          ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby pkg ${{ inputs.version }}
+        else
+          ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby -packages=gzip,xz,zip pkg ${{ inputs.version }}
+        fi
       shell: bash
