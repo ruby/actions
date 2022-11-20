@@ -202,7 +202,7 @@ jobs:
             end
           end
           File.open("/tmp/stat-after-tests.txt", "w") do |io|
-            puts out.sort
+            io.puts out.sort
           end
           EOF
           make runruby
