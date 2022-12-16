@@ -36,7 +36,7 @@ jobs:
         payload: |
           {
             "attachments": [{
-              "text": "${{ job.status }}: bundled_gems <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+              "text": "${{ job.status }}: bundled_gems <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>, see also <https://github.com/ruby/ruby/actions/workflows/bundled_gems.yml|bundled_gems in ruby/ruby>",
               "color": "danger"
             }]
           }
