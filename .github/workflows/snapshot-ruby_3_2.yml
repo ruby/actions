@@ -438,7 +438,7 @@ jobs:
         run: |
           set -x
           curl -sSL "${RUBY_PATCH_URL}" -o ruby.patch
-          cd snapshot-master/
+          cd snapshot-ruby_3_2/
           git apply ../ruby.patch
         shell: bash
         env:
@@ -478,7 +478,7 @@ jobs:
           )
       - name: Configure
         run: >-
-          ../snapshot-master/win32/configure.bat --disable-install-doc
+          ../snapshot-ruby_3_2/win32/configure.bat --disable-install-doc
           --with-opt-dir=C:/vcpkg/installed/x64-windows
       - run: nmake incs
       - run: nmake extract-extlibs
