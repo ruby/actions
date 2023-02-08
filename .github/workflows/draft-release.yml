@@ -64,11 +64,11 @@ jobs:
               echo PACKAGE_EXTS=".tar.gz .tar.xz .zip" >> $GITHUB_ENV
             fi
           fi
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@v3
         with:
           name: Packages
           path: pkg
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@v3
         with:
           name: Info
           path: pkg/info
@@ -171,7 +171,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v3
         with:
           name: Packages
           path: pkg
@@ -309,7 +309,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v3
         with:
           name: Packages
           path: pkg
@@ -445,7 +445,7 @@ jobs:
           Choco-Install -PackageName openssl
           Choco-Install -PackageName winflexbison3
         shell: pwsh
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v3
         with:
           name: Packages
           path: pkg
