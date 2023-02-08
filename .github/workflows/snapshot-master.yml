@@ -21,11 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/make-snapshot
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@v3
         with:
           name: Packages
           path: pkg
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@v3
         with:
           name: Info
           path: pkg/info
@@ -100,7 +100,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v3
         with:
           name: Packages
           path: pkg
@@ -271,7 +271,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v3
         with:
           name: Packages
           path: pkg
@@ -424,7 +424,7 @@ jobs:
           Choco-Install -PackageName winflexbison3
         shell: pwsh
 
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v3
         with:
           name: Packages
           path: pkg
@@ -517,7 +517,7 @@ jobs:
     env:
       ruby_prefix: /tmp/ruby-snapshot
     steps:
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v3
         with:
           name: Packages
           path: pkg

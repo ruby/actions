@@ -27,7 +27,7 @@ jobs:
       - run: ./configure
       - run: make Doxyfile
       - run: doxygen
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@v3
         with:
           name: doxygen-latest-html
           path: doc/capi/html
