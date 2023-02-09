@@ -72,7 +72,7 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        test_task: [check, test-bundler-parallel, test-bundled-gems]
+        test_task: [check, test-bundler, test-bundled-gems]
         os: [ubuntu-20.04]
       fail-fast: false
     runs-on: ${{ matrix.os }}
