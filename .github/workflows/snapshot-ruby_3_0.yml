@@ -193,8 +193,13 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        test_task: [check, test-bundler, test-bundled-gems]
+        test_task: [check, test-bundled-gems]
         os: [macos-11, macos-12]
+        include:
+          # macos-12 with Ruby 3.0 cannot pass test-bundler-parallel
+          # It mixed system ruby and build artifacts.
+          - os: macos-11
+            test_task: test-bundler-parallel
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
