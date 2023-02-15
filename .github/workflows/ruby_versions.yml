@@ -13,12 +13,12 @@ on:
         type: string
     outputs:
       versions:
-        description: "Stable Ruby versions"
+        description: "Ruby versions"
         value: ${{ jobs.ruby_versions.outputs.versions }}
 
 jobs:
   ruby_versions:
-    name: Generate stable Ruby versions
+    name: Generate Ruby versions
     runs-on: ubuntu-latest
     outputs:
       versions: ${{ steps.versions.outputs.value }}
