@@ -1,0 +1,32 @@
+name: ruby_versions
+
+on:
+  workflow_call:
+    inputs:
+      engine:
+        description: "The type of Ruby engine"
+        default: "all"
+        type: string
+      versions:
+        description: "Additional Ruby versions"
+        default: "[]"
+        type: string
+    outputs:
+      versions:
+        description: "Ruby versions"
+        value: ${{ jobs.ruby_versions.outputs.versions }}
+
+jobs:
+  ruby_versions:
+    name: Generate Ruby versions
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.versions.outputs.value }}
+    steps:
+      - id: versions
+        run: |
+          versions=$(curl -s "https://cache.ruby-lang.org/pub/misc/ci_versions/$ENGINE.json" | jq -c ". + $VERSIONS")
+          echo "value=${versions}" >> $GITHUB_OUTPUT
+        env:
+          ENGINE: ${{ inputs.engine }}
+          VERSIONS: ${{ inputs.versions }}
