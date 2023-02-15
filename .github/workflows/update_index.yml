@@ -18,7 +18,7 @@ jobs:
       - name: Checkout ${{ github.repository }}
         run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
       - name: Update index
-        run: ruby update_index.rb
+        run: ruby tool/update_index.rb
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
