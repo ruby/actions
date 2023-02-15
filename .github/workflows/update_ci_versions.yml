@@ -17,15 +17,8 @@ jobs:
           sudo apt-get install --no-install-recommends -y ruby bundler
       - name: Checkout ${{ github.repository }}
         run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
-      - name: Bundle install
-        run: |
-          cd tool/snapshot
-          bundle config set path 'vendor/bundle'
-          bundle install --jobs 4 --retry 3
       - name: Update CI versions
-        run: |
-          cd tool/snapshot
-          bundle exec ruby update_ci_versions.rb
+        run: ruby tool/update_ci_versions.rb
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}

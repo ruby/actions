@@ -1,6 +1,14 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require "bundler/inline"
+
+gemfile do
+  source "https://rubygems.org"
+  gem "aws-sdk-s3"
+  gem "rexml"
+end
+
 require 'aws-sdk-s3'
 require 'digest'
 require 'open-uri'
