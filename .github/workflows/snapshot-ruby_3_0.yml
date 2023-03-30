@@ -54,7 +54,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
-      - uses: ruby/action-slack@v3.0.0
+      - uses: ruby/action-slack@v3.2.1
         with:
           payload: |
             {
@@ -176,7 +176,7 @@ jobs:
         run: find $HOME/.gem -ls
       - name: Show .local
         run: find $HOME/.local -ls
-      - uses: ruby/action-slack@v3.0.0
+      - uses: ruby/action-slack@v3.2.1
         with:
           payload: |
             {
@@ -286,7 +286,7 @@ jobs:
       - name: ruby -v
         run: /usr/local/bin/ruby -v
         if: matrix.test_task == 'check'
-      - uses: ruby/action-slack@v3.0.0
+      - uses: ruby/action-slack@v3.2.1
         with:
           payload: |
             {
@@ -383,7 +383,7 @@ jobs:
         run: |
           cd snapshot-*
           .\ruby -v
-      - uses: ruby/action-slack@v3.0.0
+      - uses: ruby/action-slack@v3.2.1
         with:
           payload: |
             {

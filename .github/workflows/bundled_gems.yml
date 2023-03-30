@@ -31,7 +31,7 @@ jobs:
         git diff --no-ext-diff --ignore-submodules --exit-code
       working-directory: ruby
 
-    - uses: ruby/action-slack@v3.0.0
+    - uses: ruby/action-slack@v3.2.1
       with:
         payload: |
           {

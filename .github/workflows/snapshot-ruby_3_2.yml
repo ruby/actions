@@ -55,7 +55,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
         if: ${{ github.repository == 'ruby/actions' }}
-      - uses: ruby/action-slack@v3.0.0
+      - uses: ruby/action-slack@v3.2.1
         with:
           payload: |
             {
@@ -226,7 +226,7 @@ jobs:
         if: matrix.test_task == 'check'
       - name: Show .local
         run: find $HOME/.local -ls
-      - uses: ruby/action-slack@v3.0.0
+      - uses: ruby/action-slack@v3.2.1
         with:
           payload: |
             {
@@ -324,7 +324,7 @@ jobs:
       - name: ruby -v
         run: /usr/local/bin/ruby -v
         if: matrix.test_task == 'check'
-      - uses: ruby/action-slack@v3.0.0
+      - uses: ruby/action-slack@v3.2.1
         with:
           payload: |
             {
@@ -501,7 +501,7 @@ jobs:
         timeout-minutes: 10
         continue-on-error: ${{ matrix.continue-on-error || false }}
 
-      - uses: ruby/action-slack@v3.0.0
+      - uses: ruby/action-slack@v3.2.1
         with:
           payload: |
             {
