@@ -98,8 +98,8 @@ jobs:
           payload: |
             {
               "attachments": [{
-                title: "Build Draft Release ${{ steps.info.outputs.TARGET_VERSION }}",
-                title_link: "https://cache.ruby-lang.org/pub/tmp/",
+                "title": "Build Draft Release ${{ steps.info.outputs.TARGET_VERSION }}",
+                "title_link": "https://cache.ruby-lang.org/pub/tmp/",
                 "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ steps.info.outputs.TARGET_VERSION }}>",
                 "color": "danger"
               }]
