@@ -361,7 +361,7 @@ jobs:
             ${{ runner.os }}-vcpkg-download-
       - name: Install libraries with vcpkg
         run: |
-          vcpkg --triplet x64-windows install readline zlib
+          vcpkg --triplet x64-windows install openssl readline zlib
       - uses: actions/cache@v3
         with:
           path: C:\Users\runneradmin\AppData\Local\Temp\chocolatey
