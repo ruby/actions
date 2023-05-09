@@ -79,6 +79,7 @@ jobs:
           7z x pkg/ruby-${TARGET_VERSION}.zip ruby-${TARGET_VERSION}/revision.h
           cat ruby-${TARGET_VERSION}/revision.h
           7z l pkg/ruby-${TARGET_VERSION}.zip ruby-${TARGET_VERSION}/ChangeLog
+          ruby -e 'File.readlines("gems/bundled_gems").each{|l| next if l.start_with?("#"); raise "hash is used in gems/bundled_gems" if l.split[3] }'
       - name: Upload s3
         run: |
           set -x
