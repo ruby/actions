@@ -217,12 +217,6 @@ jobs:
         run: cd ruby-*/ && make $JOBS
       - name: Tests
         run: |
-          case "$TARGET_VERSION" in
-            2.6.*)
-              test "${{ matrix.test_task }}" = test-bundler && exit
-              test "${{ matrix.test_task }}" = test-bundled-gems && exit
-              ;;
-          esac
           cd ruby-*/ && env -u XDG_CONFIG_HOME make $JOBS -s ${{ matrix.test_task }}
         env:
           MSPECOPT: "-ff" # not using `-j` because sometimes `mspec -j` silently dies (for ruby < 2.7)
