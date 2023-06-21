@@ -352,6 +352,8 @@ jobs:
       GITPULLOPTIONS: --no-tags origin ${{github.ref}}
       PATCH: C:\msys64\usr\bin\patch.exe
       OS_VER: windows-${{ matrix.vs < 2022 && '2019' || matrix.vs }}
+      # see https://github.com/ruby/ruby/commit/9ff4399decef0036897d3cfb9ac2c710dea913ca
+      OPENSSL_MODULES: C:\vcpkg\installed\x64-windows\bin
     steps:
       - run: md build
         working-directory:
