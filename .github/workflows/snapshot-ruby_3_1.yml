@@ -372,7 +372,6 @@ jobs:
         run: |
           # Using Choco-Install for retries, but it doesn't detect failures properly
           # if you pass multiple package names in a single command.
-          Choco-Install -PackageName openssl
           Choco-Install -PackageName winflexbison3
         shell: pwsh
       - uses: actions/download-artifact@v3
