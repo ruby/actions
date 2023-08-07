@@ -168,7 +168,12 @@ jobs:
           ].each do |dir|
             Pathname(dir).each_child do |pn|
               st = pn.stat
-              out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, (Digest::SHA1.hexdigest(pn.read) if st.file?)].to_s
+              if st.file?
+                content = Digest::SHA1.hexdigest(pn.read)
+              elsif st.directory? && st.nlink <= 10
+                content = pn.children.map(&:basename).map(&:to_s).sort
+              end
+              out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, content].to_s
             rescue
               out << [pn.to_s, $!.inspect].to_s
             end
@@ -196,7 +201,12 @@ jobs:
           ].each do |dir|
             Pathname(dir).each_child do |pn|
               st = pn.stat
-              out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, (Digest::SHA1.hexdigest(pn.read) if st.file?)].to_s
+              if st.file?
+                content = Digest::SHA1.hexdigest(pn.read)
+              elsif st.directory? && st.nlink <= 10
+                content = pn.children.map(&:basename).map(&:to_s).sort
+              end
+              out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, content].to_s
             rescue
               out << [pn.to_s, $!.inspect].to_s
             end
