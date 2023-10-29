@@ -18,22 +18,38 @@ on:
       versions:
         description: "Ruby versions"
         value: ${{ jobs.ruby_versions.outputs.versions }}
+      latest:
+        description: "The latest Ruby release version"
+        value: ${{ jobs.ruby_versions.outputs.latest }}
 
 jobs:
   ruby_versions:
     name: Generate Ruby versions
     runs-on: ubuntu-latest
     outputs:
-      versions: ${{ steps.versions.outputs.value }}
+      versions: ${{ steps.versions.outputs.versions }}
+      latest: ${{ steps.versions.outputs.latest }}
     steps:
       - id: versions
         run: |
-          curl -s "https://cache.ruby-lang.org/pub/misc/ci_versions/$ENGINE.json" -o ci_versions.json
-          ruby -rjson -e "min = JSON.parse(File.read('ci_versions.json')).sort.first; \
-          if $MIN_VERSION > 1.8; p $MIN_VERSION.step(by: 0.1, to: min.to_f).map{|v| t = v.round(1).to_s; t unless ['2.8', '2.9'].include?(t) }.compact[...-1]; else; p []; end;" > versions
-          versions=$(cat ci_versions.json | jq -c ". + $VERSIONS" | jq -c ". + $(cat versions)" | jq -c "sort")
-          echo "value=${versions}" >> $GITHUB_OUTPUT
+          #! ruby
+          require 'json'
+          require 'open-uri'
+          versions = JSON.parse(URI(ENV['CI_VERSIONS']).read)
+          min = versions.min.to_f
+          if (min_version = ENV['MIN_VERSION'].to_f) > 1.8
+            versions += min_version.step(by: 0.1, to: min).
+                        map {|v| sprintf("%.1f",v)} - %w[2.8 2.9]
+          end
+          versions.concat(JSON.parse(ENV['VERSIONS'])).tap(&:uniq!).tap(&:sort!)
+          output = [
+            "versions=#{versions.to_json}\n",
+            "latest=#{versions.grep(/^\d/).last}\n",
+          ].join("")
+          File.open(ENV['GITHUB_OUTPUT'], "a") {|f| f.print output}
+          print output
+        shell: /usr/bin/ruby {0}
         env:
-          ENGINE: ${{ inputs.engine }}
+          CI_VERSIONS: https://cache.ruby-lang.org/pub/misc/ci_versions/${{ inputs.engine }}.json
           VERSIONS: ${{ inputs.versions }}
           MIN_VERSION: ${{ inputs.min_version }}
