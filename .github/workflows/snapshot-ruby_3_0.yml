@@ -194,7 +194,7 @@ jobs:
     strategy:
       matrix:
         test_task: [check, test-bundled-gems]
-        os: [macos-11, macos-12]
+        os: [macos-11, macos-12, macos-13]
         include:
           # macos-12 with Ruby 3.0 cannot pass test-bundler-parallel
           # It mixed system ruby and build artifacts.
