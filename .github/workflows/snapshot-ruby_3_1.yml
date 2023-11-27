@@ -352,11 +352,11 @@ jobs:
         if: ${{ steps.setup-msys2.outcome == 'success' }}
       - uses: actions/cache@v3
         with:
-          path: C:\vcpkg\downloads
-          key: ${{ runner.os }}-vcpkg-download-${{ matrix.os }}-${{ github.sha }}
+          path: C:\vcpkg\installed
+          key: ${{ runner.os }}-vcpkg-installed-${{ matrix.os }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-vcpkg-download-${{ matrix.os }}-
-            ${{ runner.os }}-vcpkg-download-
+            ${{ runner.os }}-vcpkg-installed-${{ matrix.os }}-
+            ${{ runner.os }}-vcpkg-installed-
       - name: Install libraries with vcpkg
         run: |
           vcpkg --triplet x64-windows install openssl readline zlib
