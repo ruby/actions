@@ -413,9 +413,9 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: C:\vcpkg\installed
-          key: ${{ runner.os }}-vcpkg-installed-${{ matrix.os }}-${{ github.sha }}
+          key: ${{ runner.os }}-vcpkg-installed-${{ env.OS_VER }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-vcpkg-installed-${{ matrix.os }}-
+            ${{ runner.os }}-vcpkg-installed-${{ env.OS_VER }}-
             ${{ runner.os }}-vcpkg-installed-
       - name: Install libraries with vcpkg
         run: |
@@ -500,7 +500,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "text": "${{ job.status }}: ${{ env.OS_VER }} (vs${{ matrix.vs }}) <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }
