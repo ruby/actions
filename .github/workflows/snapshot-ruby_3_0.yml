@@ -335,10 +335,9 @@ jobs:
 
       - name: Install libraries with vcpkg
         run: |
-          vcpkg --triplet x64-windows install readline zlib
+          vcpkg --triplet x64-windows install openssl readline zlib
       - name: Install libraries with chocolatey
         run: |
-          Choco-Install -PackageName openssl
           Choco-Install -PackageName winflexbison3
         shell: pwsh
       - uses: actions/download-artifact@v3
