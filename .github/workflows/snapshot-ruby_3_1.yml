@@ -358,7 +358,7 @@ jobs:
             ${{ runner.os }}-vcpkg-installed-
       - name: Install libraries with vcpkg
         run: |
-          vcpkg --triplet x64-windows install openssl readline zlib
+          vcpkg --triplet x64-windows install openssl readline zlib libyaml
       - uses: actions/download-artifact@v3
         with:
           name: Packages
