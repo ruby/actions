@@ -358,7 +358,7 @@ jobs:
             ${{ runner.os }}-vcpkg-installed-
       - name: Install libraries with vcpkg
         run: |
-          vcpkg --triplet x64-windows install openssl readline zlib libyaml
+          vcpkg --triplet x64-windows install openssl readline zlib
       - uses: actions/download-artifact@v3
         with:
           name: Packages
@@ -391,7 +391,7 @@ jobs:
       - name: Configure
         run: |
           cd snapshot-*
-          win32/configure.bat --disable-install-doc --enable-bundled-libffi --with-opt-dir=C:/vcpkg/installed/x64-windows --with-openssl-dir="C:/Program Files/OpenSSL-Win64"
+          win32/configure.bat --disable-install-doc --enable-bundled-libffi --enable-bundled-libyaml --with-opt-dir=C:/vcpkg/installed/x64-windows --with-openssl-dir="C:/Program Files/OpenSSL-Win64"
       - name: nmake
         run: |
           cd snapshot-*
