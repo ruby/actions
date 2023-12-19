@@ -299,7 +299,6 @@ jobs:
           - vs: 2022
             os: windows-2022
             vcvars: '"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"'
-            continue-on-error: true
       fail-fast: false
     runs-on: ${{ matrix.os }}
     defaults:
@@ -417,13 +416,11 @@ jobs:
         run: |
           cd snapshot-*
           nmake test-all TESTOPTS="-j%NUMBER_OF_PROCESSORS% --job-status=normal"
-        continue-on-error: ${{ matrix.continue-on-error || false }}
       - name: nmake test-spec
         timeout-minutes: 10
         run: |
           cd snapshot-*
           nmake test-spec
-        continue-on-error: ${{ matrix.continue-on-error || false }}
       - uses: ruby/action-slack@v3.2.1
         with:
           payload: |
