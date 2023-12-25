@@ -170,7 +170,6 @@ jobs:
         env:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
-
       - uses: actions/download-artifact@v3
         with:
           name: Packages
@@ -428,15 +427,15 @@ jobs:
         env:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
-
+      - uses: msys2/setup-msys2@v2
+        id: setup-msys2
+        with:
+          update: true
+          install: >-
+            bison
       - name: Install libraries with vcpkg
         run: |
-          vcpkg --triplet x64-windows install readline zlib
-      - name: Install libraries with chocolatey
-        run: |
-          Choco-Install -PackageName openssl
-          Choco-Install -PackageName winflexbison3
-        shell: pwsh
+          vcpkg --triplet x64-windows install readline openssl zlib
       - uses: actions/download-artifact@v3
         with:
           name: Packages
@@ -453,16 +452,19 @@ jobs:
         run: |
           cd ruby-*
           call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          set YACC=win_bison
           nmake up
           nmake
         shell: cmd
+        env:
+          YACC: bison
       - name: nmake test
         run: |
           cd ruby-*
           call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           nmake ${{ matrix.test_task }}
         shell: cmd
+        env:
+          YACC: bison
       - name: ruby -v
         run: |
           cd ruby-*
