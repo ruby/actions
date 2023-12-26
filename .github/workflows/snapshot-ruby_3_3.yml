@@ -1,0 +1,578 @@
+name: snapshot-ruby_3_3
+
+on:
+  schedule:
+    - cron: '30 18 * * *' # Daily at 18:30 UTC
+  repository_dispatch:
+    types:
+      - "make-snapshot"
+      - "snapshot-ruby_3_3"
+  workflow_dispatch:
+    inputs:
+      RUBY_PATCH_URL:
+        description: Patch URL
+        required: false
+
+jobs:
+  make-snapshot:
+    runs-on: ubuntu-latest
+    env:
+      archname: snapshot-ruby_3_3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/make-snapshot
+        with:
+          version: "3.3"
+          fetch-branch: "ruby_3_3"
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Packages
+          path: pkg
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Info
+          path: pkg/info
+      - name: Check pkg
+        run: |
+          set -x
+          ls -al pkg
+          7z x pkg/*.zip $archname/revision.h
+          cat $archname/revision.h
+          7z l pkg/*.zip $archname/ChangeLog
+      - name: Upload s3
+        run: |
+          set -x
+          for ext in .tar.gz .tar.xz .zip; do
+            aws s3 cp "pkg/$archname$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/$archname$ext" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/$archname$ext"
+          done
+          for ext in .json .yml; do
+            aws s3 cp "pkg/info/info$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/$archname$ext" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/$archname$ext"
+          done
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+        if: ${{ github.repository == 'ruby/actions' }}
+      - uses: ruby/action-slack@v3.2.1
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+
+  ubuntu:
+    needs: make-snapshot
+    strategy:
+      matrix:
+        test_task: [check, test-bundler-parallel, test-bundled-gems]
+        os: [ubuntu-22.04, ubuntu-20.04]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: tar xf pkg/*.tar.xz
+      - name: Apply patch
+        run: |
+          set -x
+          curl -sSL "${RUBY_PATCH_URL}" -o ruby.patch
+          cd snapshot-*/
+          git apply ../ruby.patch
+        shell: bash
+        env:
+          RUBY_PATCH_URL: "${{ github.event.inputs.RUBY_PATCH_URL }}"
+        if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q || :
+          # postfix `-` means `uninstall`
+          APT_INSTALL_RUBY=ruby-
+          APT_INSTALL_GIT=git-
+          case "${{ matrix.test_task }}" in
+            test-bundled-gems)
+              # test-bundled-gems requires executable host ruby
+              APT_INSTALL_RUBY=ruby
+              # test-bundled-gems-fetch requires git
+              unset APT_INSTALL_GIT
+              ;;
+            test-bundler*)
+              # avoid Bundler::Source::Git::GitNotInstalledError
+              unset APT_INSTALL_GIT
+              ;;
+            *)
+              ;;
+          esac
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
+      - name: Fixed world writable dirs
+        run: |
+          mkdir -p $HOME/.local
+          mkdir -p $HOME/.bundle/cache
+          chmod a-w $HOME/.bundle
+          # chmod a-w $HOME
+          # allow to write $HOME and check stats of HOME around tests (see below)
+          chmod -v a-w $HOME/.config
+          sudo chmod -R a-w /usr/share
+          sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
+      - name: Set ENV
+        run: |
+          echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
+      - name: configure
+        run: cd snapshot-*/ && ./configure
+      - name: make
+        run: cd snapshot-*/ && make $JOBS
+      - name: Save stats of HOME
+        run: |
+          set -euxo pipefail
+          cd snapshot-*/
+          cat >test.rb <<'EOF'
+          require 'pathname'
+          require 'digest'
+          out = []
+          [
+            Dir.home,
+          ].each do |dir|
+            Pathname(dir).each_child do |pn|
+              st = pn.stat
+              if st.file?
+                content = Digest::SHA1.hexdigest(pn.read)
+              elsif st.directory? && st.nlink <= 10
+                content = pn.children.map(&:basename).map(&:to_s).sort
+              end
+              out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, content].to_s
+            rescue
+              out << [pn.to_s, $!.inspect].to_s
+            end
+          end
+          File.open("/tmp/stat-before-tests.txt", "w") do |io|
+            io.puts out.sort
+          end
+          EOF
+          make runruby
+          rm -f test.rb
+      - name: Tests
+        run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
+        env:
+          RUBY_TESTOPTS: "-q --tty=no"
+      - name: Diff stats of HOME
+        run: |
+          set -euxo pipefail
+          cd snapshot-*/
+          cat >test.rb <<'EOF'
+          require 'pathname'
+          require 'digest'
+          out = []
+          [
+            Dir.home,
+          ].each do |dir|
+            Pathname(dir).each_child do |pn|
+              st = pn.stat
+              if st.file?
+                content = Digest::SHA1.hexdigest(pn.read)
+              elsif st.directory? && st.nlink <= 10
+                content = pn.children.map(&:basename).map(&:to_s).sort
+              end
+              out << [pn.to_s, "%o"%st.mode, st.nlink, st.uid, st.gid, st.size, content].to_s
+            rescue
+              out << [pn.to_s, $!.inspect].to_s
+            end
+          end
+          File.open("/tmp/stat-after-tests.txt", "w") do |io|
+            io.puts out.sort
+          end
+          EOF
+          make runruby
+          rm -f test.rb
+          diff -u /tmp/stat-before-tests.txt /tmp/stat-after-tests.txt
+      # leaked-globals since 2.7
+      - name: Leaked Globals
+        run: cd snapshot-*/ && make -s leaked-globals
+        if: matrix.test_task == 'check'
+      - name: make install without root privilege
+        run: cd snapshot-*/ && make $JOBS install DESTDIR="/tmp/destdir"
+        if: matrix.test_task == 'check'
+      - name: make install
+        run: cd snapshot-*/ && sudo make $JOBS install
+        if: matrix.test_task == 'check'
+      - name: ruby -v
+        run: ruby -v
+        if: matrix.test_task == 'check'
+      - name: Show .local
+        run: find $HOME/.local -ls
+      - uses: ruby/action-slack@v3.2.1
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+
+  macos:
+    needs: make-snapshot
+    strategy:
+      matrix:
+        test_task: [check, test-bundler-parallel, test-bundled-gems]
+        os: [macos-11, macos-12, macos-13]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: tar xf pkg/*.tar.xz
+      - name: Apply patch
+        run: |
+          set -x
+          curl -sSL "${RUBY_PATCH_URL}" -o ruby.patch
+          cd snapshot-*/
+          git apply ../ruby.patch
+        shell: bash
+        env:
+          RUBY_PATCH_URL: "${{ github.event.inputs.RUBY_PATCH_URL }}"
+        if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
+      - name: Install libraries
+        run: |
+          with_retry () {
+            "$@" || { sleep 5 && "$@"; } || { sleep 60 && "$@"; }
+          }
+          set -x
+          with_retry brew install gmp libffi openssl@1.1 zlib autoconf automake libtool readline libyaml
+      - name: Set ENV
+        run: |
+          echo "JOBS=-j$((1 + $(sysctl -n hw.activecpu)))" >> $GITHUB_ENV
+      - name: configure
+        run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline) --with-libyaml-dir=$(brew --prefix libyaml)
+      - name: make
+        run: cd snapshot-*/ && make $JOBS
+      - name: Tests
+        run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
+        env:
+          RUBY_TESTOPTS: "-q --tty=no"
+          RUBY_DEBUG_TEST_NO_REMOTE: "1"
+      # leaked-globals since 2.7
+      - name: Leaked Globals
+        run: cd snapshot-*/ && make -s leaked-globals
+        if: matrix.test_task == 'check'
+      - name: make install without root privilege
+        run: cd snapshot-*/ && make $JOBS install DESTDIR="/tmp/destdir"
+        if: matrix.test_task == 'check'
+      - name: make install
+        run: cd snapshot-*/ && sudo make $JOBS install
+        if: matrix.test_task == 'check'
+      - name: ruby -v
+        run: /usr/local/bin/ruby -v
+        if: matrix.test_task == 'check'
+      - uses: ruby/action-slack@v3.2.1
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+
+  windows:
+    needs: make-snapshot
+    strategy:
+      matrix:
+        include:
+          - vs: 2019
+          - vs: 2022
+      fail-fast: false
+    runs-on: windows-${{ matrix.vs < 2022 && '2019' || matrix.vs }}
+    defaults:
+      run:
+        shell: cmd
+        working-directory: build
+    name: VisualStudio ${{ matrix.vs }}
+    env:
+      GITPULLOPTIONS: --no-tags origin ${{github.ref}}
+      PATCH: C:\msys64\usr\bin\patch.exe
+      OS_VER: windows-${{ matrix.vs < 2022 && '2019' || matrix.vs }}
+      # see https://github.com/ruby/ruby/commit/9ff4399decef0036897d3cfb9ac2c710dea913ca
+      OPENSSL_MODULES: C:\vcpkg\installed\x64-windows\bin
+    steps:
+      - run: md build
+        working-directory:
+
+      - run: env | sort
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
+      - uses: msys2/setup-msys2@v2
+        id: setup-msys2
+        with:
+          update: true
+          install: >-
+            patch
+        if: ${{ env.OS_VER != 'windows-2019' }}
+      - name: patch path
+        shell: msys2 {0}
+        run: echo PATCH=$(cygpath -wa $(command -v patch)) >> $GITHUB_ENV
+        if: ${{ steps.setup-msys2.outcome == 'success' }}
+      - uses: actions/cache@v3
+        with:
+          path: C:\vcpkg\downloads
+          key: ${{ runner.os }}-vcpkg-download-${{ env.OS_VER }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-download-${{ env.OS_VER }}-
+            ${{ runner.os }}-vcpkg-download-
+      - uses: actions/cache@v3
+        with:
+          path: C:\vcpkg\installed
+          key: ${{ runner.os }}-vcpkg-installed-${{ env.OS_VER }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-installed-${{ env.OS_VER }}-
+            ${{ runner.os }}-vcpkg-installed-
+      - name: Install libraries with vcpkg
+        run: |
+          vcpkg --triplet x64-windows install libffi libyaml openssl readline zlib
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: 7z x pkg/*.zip
+        working-directory:
+      - name: Apply patch
+        run: |
+          set -x
+          curl -sSL "${RUBY_PATCH_URL}" -o ruby.patch
+          cd snapshot-ruby_3_3/
+          git apply ../ruby.patch
+        shell: bash
+        env:
+          RUBY_PATCH_URL: "${{ github.event.inputs.RUBY_PATCH_URL }}"
+        if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
+        working-directory:
+
+      - uses: actions/cache@v3
+        with:
+          path: snapshot-*/.downloaded-cache
+          key: downloaded-cache
+      - name: setup env
+        # %TEMP% is inconsistent with %TMP% and test-all expects they are consistent.
+        # https://github.com/actions/virtual-environments/issues/712#issuecomment-613004302
+        run: |
+          set VS=${{ matrix.vs }}
+          set VCVARS=${{ matrix.vcvars }}
+          if not "%VCVARS%" == "" goto :vcset
+            set VCVARS="C:\Program Files (x86)\Microsoft Visual Studio\%VS%\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+            if not exist %VCVARS% set VCVARS="C:\Program Files\Microsoft Visual Studio\%VS%\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          :vcset
+          set | C:\msys64\usr\bin\sort > old.env
+          call %VCVARS%
+          set TMP=%USERPROFILE%\AppData\Local\Temp
+          set TEMP=%USERPROFILE%\AppData\Local\Temp
+          set /a TEST_JOBS=(15 * %NUMBER_OF_PROCESSORS% / 10) > nul
+          set | C:\msys64\usr\bin\sort > new.env
+          C:\msys64\usr\bin\comm -13 old.env new.env >> %GITHUB_ENV%
+          del *.env
+      - name: link libraries
+        run: |
+          for %%I in (C:\vcpkg\installed\x64-windows\bin\*.dll) do (
+            if not %%~nI == readline mklink %%~nxI %%I
+          )
+          for %%I in (libcrypto-1_1-x64 libssl-1_1-x64) do (
+            ren c:\Windows\System32\%%I.dll %%I.dll_
+          )
+      - name: Configure
+        run: >-
+          ../snapshot-ruby_3_3/win32/configure.bat --disable-install-doc
+          --with-opt-dir=C:/vcpkg/installed/x64-windows
+      - run: nmake incs
+      - run: nmake extract-extlibs
+      - run: nmake
+        env:
+          YACC: win_bison
+
+      - name: ruby -v
+        run: |
+          .\ruby -v
+
+      - run: nmake test
+        timeout-minutes: 5
+      - run: nmake test-all
+        env:
+          RUBY_TESTOPTS: -j${{env.TEST_JOBS}} --job-status=normal
+        timeout-minutes: 60
+        continue-on-error: ${{ matrix.continue-on-error || false }}
+      - run: nmake test-spec
+        timeout-minutes: 10
+        continue-on-error: ${{ matrix.continue-on-error || false }}
+
+      - uses: ruby/action-slack@v3.2.1
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: ${{ env.OS_VER }} (vs${{ matrix.vs }}) <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
+
+  non_development:
+    needs: make-snapshot
+    runs-on: ubuntu-22.04
+    env:
+      ruby_prefix: /tmp/ruby-snapshot
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: Packages
+          path: pkg
+      - name: Extract
+        run: tar xf pkg/*.tar.xz
+      - name: Substitute patchlevel
+        run: |
+          set -x
+          cd snapshot-*/
+          sed -i.orig 's/^\( *# *define  *RUBY_PATCHLEVEL\)  *-.*/\1 0/' version.h
+          diff -u version.h.orig version.h || :
+          rm -f version.h.orig
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q || :
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev bison- autoconf-
+      - name: Set ENV
+        run: |
+          echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
+      - name: configure
+        run: cd snapshot-*/ && ./configure --prefix="${ruby_prefix}"
+      - name: make
+        run: cd snapshot-*/ && make $JOBS
+      - name: Leaked Globals
+        run: cd snapshot-*/ && make -s leaked-globals
+      - name: make install
+        run: cd snapshot-*/ && make $JOBS install
+      - name: Set PATH
+        run: echo "PATH=${ruby_prefix}/bin:$PATH" >> $GITHUB_ENV
+      - name: Check patchlevel
+        id: check-patchlevel
+        run: |
+          exec "${ruby_prefix}/bin/ruby" -vx "$0"
+          #!ruby
+          puts "RUBY_PATCHLEVEL=#{RUBY_PATCHLEVEL.inspect}"
+          abort unless RUBY_PATCHLEVEL >= 0
+        working-directory: ${{ env.ruby_prefix }}
+        continue-on-error: true
+      - name: Check LOADPATH
+        id: check-loadpath
+        run: |
+          exec ${ruby_prefix}/bin/ruby -vx "$0"
+          #!ruby
+          paths = $:.grep(/\+/)
+          pp paths
+          abort unless paths.empty?
+        working-directory: ${{ env.ruby_prefix }}
+        continue-on-error: true
+      - name: Check pathnames
+        id: check-pathnames
+        run: |
+          ! find -name '*+*' | grep +
+        working-directory: ${{ env.ruby_prefix }}
+        continue-on-error: true
+      - name: result
+        run: false
+        if: ${{ contains(steps.*.outcome, 'failure') }}
