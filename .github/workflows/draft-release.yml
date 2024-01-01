@@ -170,7 +170,7 @@ jobs:
         env:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: Packages
           path: pkg
@@ -302,7 +302,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: Packages
           path: pkg
@@ -436,7 +436,7 @@ jobs:
       - name: Install libraries with vcpkg
         run: |
           vcpkg --triplet x64-windows install readline openssl zlib
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: Packages
           path: pkg
