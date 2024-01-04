@@ -64,11 +64,11 @@ jobs:
               echo PACKAGE_EXTS=".tar.gz .tar.xz .zip" >> $GITHUB_ENV
             fi
           fi
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: Packages
           path: pkg
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: Info
           path: pkg/info

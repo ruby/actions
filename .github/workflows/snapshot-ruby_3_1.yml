@@ -24,11 +24,11 @@ jobs:
         with:
           version: "3.1"
           fetch-branch: "ruby_3_1"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: Packages
           path: pkg
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: Info
           path: pkg/info
