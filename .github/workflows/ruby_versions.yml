@@ -37,9 +37,14 @@ jobs:
           require 'open-uri'
           versions = JSON.parse(URI(ENV['CI_VERSIONS']).read)
           min = versions.min.to_f
-          if (min_version = ENV['MIN_VERSION'].to_f) > 1.8
+          min_version = ENV['MIN_VERSION'].to_f
+          if min_version > 1.8 && min_version < min
             versions += min_version.step(by: 0.1, to: min).
                         map {|v| sprintf("%.1f",v)} - %w[2.8 2.9]
+          end
+          if min < min_version
+            versions -= min.step(by: 0.1, to: min_version - 0.1).
+                        map {|v| sprintf("%.1f",v)}
           end
           versions.concat(JSON.parse(ENV['VERSIONS'])).tap(&:uniq!).tap(&:sort!)
           output = [
