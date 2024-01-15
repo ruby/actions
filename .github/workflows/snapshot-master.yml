@@ -141,6 +141,7 @@ jobs:
       - name: Fixed world writable dirs
         run: |
           mkdir -p $HOME/.local
+          mkdir -p $HOME/.cache
           mkdir -p $HOME/.bundle/cache
           chmod a-w $HOME/.bundle
           # chmod a-w $HOME
