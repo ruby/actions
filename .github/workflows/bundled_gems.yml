@@ -2,7 +2,7 @@ name: "Update bundled_gems"
 
 on:
   schedule:
-    - cron: '10 10 * * *'
+    - cron: '15 7 * * *'
 
 jobs:
   Update-bundled_gems:
