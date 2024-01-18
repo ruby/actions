@@ -7,6 +7,7 @@
 [![Actions Status: snapshot-ruby\_3\_0](https://github.com/ruby/actions/workflows/snapshot-ruby_3_0/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_3_0")
 [![Actions Status: snapshot-ruby\_3\_1](https://github.com/ruby/actions/workflows/snapshot-ruby_3_1/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_3_1")
 [![Actions Status: snapshot-ruby\_3\_2](https://github.com/ruby/actions/workflows/snapshot-ruby_3_2/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_3_2")
+[![snapshot-ruby_3_3](https://github.com/ruby/actions/actions/workflows/snapshot-ruby_3_3.yml/badge.svg)](https://github.com/ruby/actions/actions/workflows/snapshot-ruby_3_3.yml)
 [![Actions Status: update\_index](https://github.com/ruby/actions/workflows/update_index/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"update_index")
 
 # ruby/actions
