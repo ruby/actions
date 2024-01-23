@@ -189,8 +189,11 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        test_task: [check, test-bundler-parallel, test-bundled-gems]
-        os: [macos-11, macos-12, macos-13]
+        test_task: [check, test-bundled-gems]
+        os: [macos-12, macos-13, macos-arm-oss]
+        include:
+          - os: macos-arm-oss
+            test_task: test-bundler-parallel
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
