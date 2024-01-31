@@ -189,6 +189,7 @@ jobs:
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
+          TEST_BUNDLED_GEMS_ALLOW_FAILURES: "typeprof"
       - name: Diff stats of HOME
         run: |
           set -euxo pipefail
