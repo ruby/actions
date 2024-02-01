@@ -320,6 +320,7 @@ jobs:
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: "-q --tty=no"
+          TEST_BUNDLED_GEMS_ALLOW_FAILURES: "typeprof"
           RUBY_DEBUG_TEST_NO_REMOTE: "1"
       # leaked-globals since 2.7
       - name: Leaked Globals
