@@ -242,14 +242,6 @@ jobs:
         env:
           RUBY_PATCH_URL: "${{ github.event.inputs.RUBY_PATCH_URL }}"
         if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
-      - name: Update spec
-        run: |
-          set -x
-          git clone --depth=1 https://github.com/ruby/ruby ruby
-          cd snapshot-*/
-          rm -rf spec/mspec spec/ruby
-          mv -v ../ruby/spec/mspec ../ruby/spec/ruby spec
-        if: matrix.test_task == 'check'
       - name: Install libraries
         run: |
           with_retry () {
