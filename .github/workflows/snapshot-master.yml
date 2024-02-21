@@ -250,6 +250,23 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
         if: failure()
+      - name: Get ruby/ruby sha
+        id: ruby_sha
+        run: cd snapshot-*/ && echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        if: failure()
+      - uses: ruby/action-slack@v3.2.1
+        with:
+          payload: |
+            {
+              "ci": "GitHub Actions",
+              "env": "snapshot: ${{ matrix.os }} / ${{ matrix.test_task }}",
+              "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "commit": "${{ steps.ruby_sha.outputs.sha }}",
+              "branch": "master"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SIMPLER_ALERTS_URL }}
+        if: failure()
 
   macos:
     needs: make-snapshot
