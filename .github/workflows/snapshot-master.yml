@@ -236,7 +236,7 @@ jobs:
         run: cd snapshot-*/ && sudo make $JOBS install
         if: matrix.test_task == 'check'
       - name: ruby -v
-        run: ruby -v
+        run: /usr/local/bin/ruby -v
         if: matrix.test_task == 'check'
       - name: Show .local
         run: find $HOME/.local -ls
@@ -254,7 +254,7 @@ jobs:
         if: failure()
       - name: Get ruby/ruby sha
         id: ruby_sha
-        run: cd snapshot-*/ && echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        run: /usr/local/bin/ruby -e 'puts "sha=#{RUBY_REVISION}"' >> $GITHUB_OUTPUT
         if: failure()
       - uses: ruby/action-slack@v3.2.1
         with:
