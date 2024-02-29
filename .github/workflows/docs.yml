@@ -1,0 +1,92 @@
+name: Make HTML for docs.r-l.o/en/
+
+on:
+  schedule:
+    - cron: '00 13 * * *'
+  repository_dispatch:
+    types:
+      - "docs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  make:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - ref: "ruby_3_0"
+            version: "3.0"
+          - ref: "ruby_3_1"
+            version: "3.1"
+          - ref: "ruby_3_2"
+            version: "3.2"
+          - ref: "ruby_3_3"
+            version: "3.3"
+          - ref: "master"
+            version: "master"
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: "ruby/ruby"
+          ref: "${{ matrix.ref }}"
+          path: "sources/${{ matrix.version }}"
+
+      - name: Make
+        run: |
+          set -euxo pipefail
+          cd sources/${{ matrix.version }}
+          ./autogen.sh || autoconf
+          ./configure --disable-install-doc
+          make -j2
+
+      - name: Make HTML
+        run: >-
+          make html
+          -C "sources/${{ matrix.version }}"
+          RDOCOPTS="--title=\"Documentation for Ruby ${{ matrix.version }}\" --main=README.md"
+          HTMLOUT="/tmp/html/en/${{ matrix.version }}"
+
+      - name: Make archive
+        run: >-
+          env XZ_OPT=-9e
+          tar -C /tmp/html/en
+          --owner=root --group=root
+          -acvf /tmp/ruby-docs-en-${{ matrix.version }}.tar.xz ${{ matrix.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: "en-${{ matrix.ref }}"
+          retention-days: 3
+          path: "/tmp/ruby-docs-en-${{ matrix.version }}.tar.xz"
+
+      - name: Upload s3
+        run: |
+          set -x
+          filename="ruby-docs-en-${{ matrix.version }}.tar.xz"
+          aws s3 cp "/tmp/$filename" "s3://ftp.r-l.o/pub/ruby/doc/$filename" --no-progress
+          curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/doc/$filename"
+          curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/doc/"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+        if: ${{ github.repository == 'ruby/actions' }}
+
+      - uses: ruby/action-slack@v3.2.1
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: ruby-docs-en-${{ matrix.version }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
