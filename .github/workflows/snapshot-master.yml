@@ -146,7 +146,7 @@ jobs:
         if: "${{ matrix.test_task == 'test-bundled-gems' }}"
       - name: Fixed world writable dirs
         run: |
-          mkdir -p $HOME/.local
+          mkdir -p $HOME/.local/share
           mkdir -p $HOME/.cache/gem/specs
           mkdir -p $HOME/.bundle/cache
           chmod a-w $HOME/.bundle
