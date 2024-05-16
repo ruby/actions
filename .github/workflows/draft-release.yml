@@ -202,11 +202,12 @@ jobs:
         run: |
           mkdir -p $HOME/.gem
           chmod -v a-w $HOME $HOME/.config
-          chmod -v a+w $HOME/.cache
           sudo chmod -R a-w /usr/share
           sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
       - name: mkdir ~/.local
         run: ls -al $HOME && sudo mkdir -p $HOME/.local && sudo chown $USER $HOME/.local
+      - name: mkdir ~/.cache
+        run: ls -al $HOME && sudo mkdir -p $HOME/.cache && sudo chown $USER $HOME/.cache
       - name: Set ENV
         run: |
           echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
