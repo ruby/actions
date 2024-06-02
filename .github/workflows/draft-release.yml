@@ -93,7 +93,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
-      - uses: ruby/action-slack@v3.2.1
+      - uses: ruby/action-slack@v3.2.2
         with:
           payload: |
             {
@@ -107,7 +107,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
         if: failure()
-      - uses: ruby/action-slack@v3.2.1
+      - uses: ruby/action-slack@v3.2.2
         with:
           payload: |
             {
@@ -230,7 +230,7 @@ jobs:
       - name: ruby -v
         run: ruby -v
         if: matrix.test_task == 'check'
-      - uses: ruby/action-slack@v3.2.1
+      - uses: ruby/action-slack@v3.2.2
         with:
           payload: |
             {
@@ -242,7 +242,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
         if: failure()
-      - uses: ruby/action-slack@v3.2.1
+      - uses: ruby/action-slack@v3.2.2
         with:
           payload: |
             {
@@ -348,7 +348,7 @@ jobs:
       - name: ruby -v
         run: /usr/local/bin/ruby -v
         if: matrix.test_task == 'check'
-      - uses: ruby/action-slack@v3.2.1
+      - uses: ruby/action-slack@v3.2.2
         with:
           payload: |
             {
@@ -360,7 +360,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
         if: failure()
-      - uses: ruby/action-slack@v3.2.1
+      - uses: ruby/action-slack@v3.2.2
         with:
           payload: |
             {
@@ -466,7 +466,7 @@ jobs:
         run: |
           cd ruby-*
           .\ruby -v
-      - uses: ruby/action-slack@v3.2.1
+      - uses: ruby/action-slack@v3.2.2
         with:
           payload: |
             {
@@ -478,7 +478,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
         if: failure()
-      - uses: ruby/action-slack@v3.2.1
+      - uses: ruby/action-slack@v3.2.2
         with:
           payload: |
             {
