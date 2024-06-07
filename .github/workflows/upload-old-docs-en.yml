@@ -1,0 +1,35 @@
+name: Upload docs.r-l.o/en/2.y.0
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download from temporary archives
+        run: |
+          set -eux
+          for y in 0 1 2 3 4 5 6 7; do
+            filename="ruby-docs-en-2.$y.0.tar.xz"
+            curl -sSO "https://docs.ruby-lang.org/en/$filename"
+          done
+
+      - name: Upload s3
+        run: |
+          set -x
+          set -eux
+          for y in 0 1 2 3 4 5 6 7; do
+            filename="ruby-docs-en-2.$y.0.tar.xz"
+            aws s3 cp "$filename" "s3://ftp.r-l.o/pub/ruby/doc/$filename" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/doc/$filename"
+          done
+          curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/doc/"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+        if: ${{ github.repository == 'ruby/actions' }}
