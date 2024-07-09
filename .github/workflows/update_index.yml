@@ -5,6 +5,7 @@ on:
     - cron: '17 16 * * *'
   repository_dispatch:
     types: "update_index"
+  workflow_dispatch:
 
 jobs:
   update_index:
