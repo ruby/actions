@@ -490,3 +490,30 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
         if: success()
+
+  release:
+    needs: [ubuntu, macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set TARGET_VERSION
+        run: |
+          if [ -z "$TARGET_VERSION" ]; then
+            GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
+            TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          fi
+          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
+          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+        id: info
+        env:
+          GITHUB_EVENT_ACTION: ${{ github.event.action }} # repository_dispatch
+          TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION }} # workflow_dispatch
+
+      - name: Trigger release workflow at ruby/ruby
+        run: |
+          curl -L -X POST \
+            -H "Authorization: Bearer xxx" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/ruby/ruby/dispatches \
+            -d '{"event_type": "release", "client_payload": {"version": "${{ TARGET_VERSION }}"}}'
