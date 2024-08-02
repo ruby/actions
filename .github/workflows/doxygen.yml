@@ -38,3 +38,12 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.RUBYCI_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.RUBYCI_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
+      - name: Purge cache
+        run: >-
+          curl -i -X POST
+          "https://api.fastly.com/service/${DOCS_FASTLY_SERVICE_ID}/purge/${SURROGATE_KEY}"
+          -H "Fastly-Key: ${DOCS_FASTLY_KEY}" -H "fastly-soft-purge: 1" -H "Accept: application/json"
+        env:
+          DOCS_FASTLY_KEY: ${{ secrets.DOCS_FASTLY_KEY }}
+          DOCS_FASTLY_SERVICE_ID: ${{ secrets.DOCS_FASTLY_SERVICE_ID }}
+          SURROGATE_KEY: doxygen-latest-html
