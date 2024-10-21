@@ -149,6 +149,7 @@ jobs:
           mkdir -p $HOME/.local/share
           mkdir -p $HOME/.cache/gem/specs
           mkdir -p $HOME/.bundle/cache
+          mkdir -p $HOME/.ssh
           chmod a-w $HOME/.bundle
           # chmod a-w $HOME
           # allow to write $HOME and check stats of HOME around tests (see below)
