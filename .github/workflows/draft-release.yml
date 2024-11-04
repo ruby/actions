@@ -260,7 +260,7 @@ jobs:
     strategy:
       matrix:
         test_task: [check, test-bundled-gems]
-        os: [macos-12, macos-13, macos-14]
+        os: [macos-13, macos-14, macos-15]
         include:
           - os: macos-14
             test_task: test-bundler-parallel
