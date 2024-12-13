@@ -198,6 +198,11 @@ jobs:
               ;;
           esac
           sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
+        # test-bundled-gems requires executable host ruby
+        if: "${{ matrix.test_task == 'test-bundled-gems' }}"
       - name: Fixed world writable dirs
         run: |
           mkdir -p $HOME/.gem
