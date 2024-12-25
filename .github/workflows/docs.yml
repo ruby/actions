@@ -18,14 +18,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - ref: "ruby_3_0"
-            version: "3.0"
           - ref: "ruby_3_1"
             version: "3.1"
           - ref: "ruby_3_2"
             version: "3.2"
           - ref: "ruby_3_3"
             version: "3.3"
+          - ref: "ruby_3_4"
+            version: "3.4"
           - ref: "master"
             version: "master"
       fail-fast: false
