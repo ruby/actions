@@ -12,10 +12,9 @@ jobs:
       - name: Install libraries
         run: |
           set -x
-          sudo sed /etc/apt/sources.list -e "s/^# deb-src/deb-src/g" -i
           sudo apt-get update -q || :
           sudo apt-get install --no-install-recommends -q -y ruby doxygen graphviz
-          sudo apt-get build-dep -q -y ruby$(ruby -e 'puts File.basename(RUBY_VERSION, ".*")')
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev git
 
       - name: Checkout ruby/ruby
         run: |
