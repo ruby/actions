@@ -76,7 +76,7 @@ jobs:
     strategy:
       matrix:
         test_task: [check, test-bundler-parallel, test-bundled-gems]
-        os: [ubuntu-22.04, ubuntu-20.04]
+        os: [ubuntu-24.04, ubuntu-22.04]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -520,7 +520,7 @@ jobs:
 
   non_development:
     needs: make-snapshot
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       ruby_prefix: /tmp/ruby-snapshot
     steps:
