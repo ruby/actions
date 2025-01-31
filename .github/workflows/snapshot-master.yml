@@ -161,7 +161,6 @@ jobs:
           echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
       - name: configure
         run: cd snapshot-*/ && ./configure
-      - run: cd snapshot-*/ && make update-gems $JOBS
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: Save stats of HOME
