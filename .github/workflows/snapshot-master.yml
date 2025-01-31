@@ -161,8 +161,7 @@ jobs:
           echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
       - name: configure
         run: cd snapshot-*/ && ./configure
-      - name: extract-gems
-        run: cd snapshot-*/ && make extract-gems $JOBS
+      - run: cd snapshot-*/ && make update-gems $JOBS
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: Save stats of HOME
@@ -339,8 +338,6 @@ jobs:
           echo "JOBS=-j$((1 + $(sysctl -n hw.activecpu)))" >> $GITHUB_ENV
       - name: configure
         run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline) --with-libyaml-dir=$(brew --prefix libyaml)
-      - name: extract-gems
-        run: cd snapshot-*/ && make extract-gems $JOBS
       - name: make
         run: cd snapshot-*/ && make $JOBS
       - name: Tests
@@ -508,7 +505,6 @@ jobs:
           --with-opt-dir=C:/vcpkg/installed/x64-windows
       - run: nmake incs
       - run: nmake extract-extlibs
-      - run: nmake extract-gems
       - run: nmake
         env:
           YACC: win_bison
