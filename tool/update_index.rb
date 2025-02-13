@@ -41,7 +41,20 @@ def create_index(bucket)
           STDERR.puts 'Read from cache'
           body = cache.read
         else
-          body = uri.read
+          retry_count = 5
+          begin
+            # This access is flaky, so we need to retry
+            body = uri.read
+          rescue Net::ReadTimeout => e
+            if retry_count.zero?
+              STDERR.puts 'Failed to download'
+              raise e
+            else
+              retry_count -= 1
+              sleep 5
+              retry
+            end
+          end
           cache.write(body)
         end
         digests = %w(SHA1 SHA256 SHA512).map do |algm|
