@@ -388,7 +388,16 @@ jobs:
       - name: Configure
         run: |
           cd snapshot-*
-          win32/configure.bat --disable-install-doc --enable-bundled-libffi --enable-bundled-libyaml --with-opt-dir=C:/vcpkg/installed/x64-windows --with-openssl-dir="C:/Program Files/OpenSSL-Win64"
+          win32/configure.bat --disable-install-doc --enable-bundled-libffi --enable-bundled-libyaml --with-opt-dir=C:/vcpkg/installed/x64-windows
+      - name: link libraries
+        run: |
+          cd snapshot-*
+          for %%I in (C:\vcpkg\installed\x64-windows\bin\*.dll) do (
+            if not %%~nI == readline mklink %%~nxI %%I
+          )
+          for %%I in (libcrypto-1_1-x64 libssl-1_1-x64) do (
+            ren c:\Windows\System32\%%I.dll %%I.dll_
+          )
       - name: nmake
         run: |
           cd snapshot-*
