@@ -6,7 +6,6 @@
 [![Actions Status: Remove pub\/tmp\/ruby-\*](https://github.com/ruby/actions/workflows/Remove%20pub%2Ftmp%2Fruby-*/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"Remove+pub/tmp/ruby-*")
 [![Actions Status: ruby\_versions](https://github.com/ruby/actions/workflows/ruby_versions/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"ruby_versions")
 [![Actions Status: snapshot-master](https://github.com/ruby/actions/workflows/snapshot-master/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-master")
-[![Actions Status: snapshot-ruby\_3\_1](https://github.com/ruby/actions/workflows/snapshot-ruby_3_1/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_3_1")
 [![Actions Status: snapshot-ruby\_3\_2](https://github.com/ruby/actions/workflows/snapshot-ruby_3_2/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_3_2")
 [![Actions Status: snapshot-ruby\_3\_3](https://github.com/ruby/actions/workflows/snapshot-ruby_3_3/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_3_3")
 [![Actions Status: snapshot-ruby\_3\_4](https://github.com/ruby/actions/workflows/snapshot-ruby_3_4/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"snapshot-ruby_3_4")
