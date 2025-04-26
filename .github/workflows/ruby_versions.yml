@@ -43,8 +43,7 @@ jobs:
                         map {|v| sprintf("%.1f",v)} - %w[2.8 2.9]
           end
           if min < min_version
-            versions -= min.step(by: 0.1, to: min_version - 0.1).
-                        map {|v| sprintf("%.1f",v)}
+            versions.reject! {|v| v.match?(/^\d/) && v.to_f < min_version}
           end
           versions.concat(JSON.parse(ENV['VERSIONS'])).tap(&:uniq!).tap(&:sort!)
           output = [
