@@ -1,9 +1,10 @@
 name: coverage
 on:
-#  schedule:
-#    - cron: '0 2,5,8,11,14,17,20,23 * * *' # Every three hours
+  schedule:
+    - cron: '0 2,5,8,11,14,17,20,23 * * *' # Every three hours
   repository_dispatch:
     types: "coverage"
+  workflow_dispatch:
 
 jobs:
   latest:
@@ -37,7 +38,7 @@ jobs:
       - name: Build
         run: cd ruby && make -j$((1 + $(nproc --all)))
       - name: Tests
-        run: cd ruby && make -s check COVERAGE=true
+        run: cd ruby && RUBY_TEST_TIMEOUT_SCALE=10 make -s check COVERAGE=true
       - name: Aggregate coverage results
         run: cd ruby && make lcov
       - uses: actions/upload-artifact@v4
