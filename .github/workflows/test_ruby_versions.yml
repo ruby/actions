@@ -1,0 +1,79 @@
+name: Test ruby_versions workflow
+
+on:
+  push:
+    paths:
+      - '.github/workflows/ruby_versions.yml'
+      - '.github/workflows/test_ruby_versions.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/ruby_versions.yml'
+      - '.github/workflows/test_ruby_versions.yml'
+
+jobs:
+  call_defaults:
+    uses: ./.github/workflows/ruby_versions.yml
+
+  verify_defaults:
+    runs-on: ubuntu-latest
+    needs: call_defaults
+    steps:
+      - name: Check default outputs are not empty
+        run: |
+          echo "Default versions: ${{ needs.call_defaults.outputs.versions }}"
+          echo "Default latest: ${{ needs.call_defaults.outputs.latest }}"
+          if [ -z "${{ needs.call_defaults.outputs.versions }}" ]; then
+            echo "::error ::Versions output is empty!"
+            exit 1
+          fi
+          if [ -z "${{ needs.call_defaults.outputs.latest }}" ]; then
+            echo "::error ::Latest output is empty!"
+            exit 1
+          fi
+      - name: Check default versions is valid JSON
+        run: echo '${{ needs.call_defaults.outputs.versions }}' | ruby -r json -e 'JSON.parse(STDIN.read)'
+
+  call_specific:
+    uses: ./.github/workflows/ruby_versions.yml
+    with:
+      engine: 'cruby-jruby'
+      min_version: 3.3
+      versions: '["head", "debug"]'
+
+  verify_specific:
+    runs-on: ubuntu-latest
+    needs: call_specific
+    steps:
+      - name: Check specific outputs are not empty
+        run: |
+          echo "Specific versions: ${{ needs.call_specific.outputs.versions }}"
+          echo "Specific latest: ${{ needs.call_specific.outputs.latest }}"
+          if [ -z "${{ needs.call_specific.outputs.versions }}" ]; then
+            echo "::error ::Versions output is empty!"
+            exit 1
+          fi
+          if [ -z "${{ needs.call_specific.outputs.latest }}" ]; then
+            echo "::error ::Latest output is empty!"
+            exit 1
+          fi
+      - name: Check specific versions is valid JSON and contains added/excluded versions
+        run: |
+          versions='${{ needs.call_specific.outputs.versions }}'
+          echo "$versions" | ruby -r json -e 'JSON.parse(STDIN.read)'
+          echo "$versions" | grep '"head"' || (echo "::error ::'head' not found in versions!" && exit 1)
+          echo "$versions" | grep '"debug"' || (echo "::error ::'debug' not found in versions!" && exit 1)
+          if echo "$versions" | grep '"3.2"'; then
+            echo "::error ::Version '3.2' found but should be excluded by min_version 3.3!"
+            exit 1
+          else
+            echo "Version '3.2' correctly excluded."
+          fi
+          echo "$versions" | grep '"3.3"' || (echo "::error ::'3.3' not found in versions!" && exit 1)
+      - name: Check min_version constraint (latest >= 3.3)
+        run: |
+          latest='${{ needs.call_specific.outputs.latest }}'
+          if ! awk -v latest="$latest" 'BEGIN { exit !(latest >= 3.3) }'; then
+            echo "::error ::Latest version $latest is less than min_version 3.3!"
+            exit 1
+          fi
+          echo "Latest version $latest is >= 3.3 as expected."
