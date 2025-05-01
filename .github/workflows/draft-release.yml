@@ -382,8 +382,9 @@ jobs:
     needs: make-snapshot
     strategy:
       matrix:
-        os: [windows-2019]
-        vs: [2019]
+        os: [windows-2022]
+        vs: [2022]
+        vcvars: ['10.0.22621.0 -vcvars_ver=14.2']
         test_task: [test]
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -447,13 +448,13 @@ jobs:
       - name: configure
         run: |
           cd ruby-*
-          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat" ${{ matrix.vcvars || ''}}
           win32/configure.bat --disable-install-doc --without-ext=+,dbm,gdbm --enable-bundled-libffi --with-opt-dir=C:/vcpkg/installed/x64-windows
         shell: cmd
       - name: nmake
         run: |
           cd ruby-*
-          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat" ${{ matrix.vcvars || ''}}
           nmake up
           nmake
         shell: cmd
@@ -462,7 +463,7 @@ jobs:
       - name: nmake test
         run: |
           cd ruby-*
-          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat" ${{ matrix.vcvars || '' }}
           nmake ${{ matrix.test_task }}
         shell: cmd
         env:
