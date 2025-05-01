@@ -357,19 +357,20 @@ jobs:
     strategy:
       matrix:
         include:
-          - vs: 2019
-          # - vs: 2022
+          - os: 2022
+            vs: 2022
+            vcvars: '10.0.22621.0 -vcvars_ver=14.2'
       fail-fast: false
-    runs-on: windows-${{ matrix.vs < 2022 && '2019' || matrix.vs }}
+    runs-on: windows-${{ matrix.os }}
     defaults:
       run:
         shell: cmd
         working-directory: build
-    name: VisualStudio ${{ matrix.vs }}
+    name: Windows ${{ matrix.os }}
     env:
       GITPULLOPTIONS: --no-tags origin ${{github.ref}}
       PATCH: C:\msys64\usr\bin\patch.exe
-      OS_VER: windows-${{ matrix.vs < 2022 && '2019' || matrix.vs }}
+      OS_VER: windows-${{ matrix.os }}
       # see https://github.com/ruby/ruby/commit/9ff4399decef0036897d3cfb9ac2c710dea913ca
       OPENSSL_MODULES: C:\vcpkg\installed\x64-windows\bin
     steps:
@@ -408,7 +409,6 @@ jobs:
           update: true
           install: >-
             patch
-        if: ${{ env.OS_VER != 'windows-2019' }}
       - name: patch path
         shell: msys2 {0}
         run: echo PATCH=$(cygpath -wa $(command -v patch)) >> $GITHUB_ENV
@@ -458,14 +458,12 @@ jobs:
         # %TEMP% is inconsistent with %TMP% and test-all expects they are consistent.
         # https://github.com/actions/virtual-environments/issues/712#issuecomment-613004302
         run: |
-          set VS=${{ matrix.vs }}
-          set VCVARS=${{ matrix.vcvars }}
           if not "%VCVARS%" == "" goto :vcset
-            set VCVARS="C:\Program Files (x86)\Microsoft Visual Studio\%VS%\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-            if not exist %VCVARS% set VCVARS="C:\Program Files\Microsoft Visual Studio\%VS%\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+            set VCVARS="C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+            if not exist %VCVARS% set VCVARS="C:\Program Files\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           :vcset
           set | C:\msys64\usr\bin\sort > old.env
-          call %VCVARS%
+          call %VCVARS% ${{ matrix.vcvars }}
           set TMP=%USERPROFILE%\AppData\Local\Temp
           set TEMP=%USERPROFILE%\AppData\Local\Temp
           set /a TEST_JOBS=(15 * %NUMBER_OF_PROCESSORS% / 10) > nul
