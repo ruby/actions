@@ -442,8 +442,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: Packages
+          path: pkg
       - name: Extract
-        run: 7z x ruby-*.zip
+        run: 7z x pkg/ruby-*.zip
       - name: configure
         run: |
           cd ruby-*
