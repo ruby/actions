@@ -445,6 +445,9 @@ jobs:
           path: pkg
       - name: Extract
         run: 7z x pkg/ruby-*.zip
+      - name: Find
+        run: find .
+        shell: bash
       - name: configure
         run: |
           cd ruby-*
