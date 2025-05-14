@@ -450,13 +450,13 @@ jobs:
         shell: bash
       - name: configure
         run: |
-          cd ruby-%TARGET_VERSION%
+          cd ruby-${{ github.event.inputs.TARGET_VERSION }}
           call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat" ${{ matrix.vcvars || ''}}
           win32/configure.bat --disable-install-doc --without-ext=+,dbm,gdbm --enable-bundled-libffi --with-opt-dir=C:/vcpkg/installed/x64-windows
         shell: cmd
       - name: nmake
         run: |
-          cd ruby-*
+          cd ruby-${{ github.event.inputs.TARGET_VERSION }}
           call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat" ${{ matrix.vcvars || ''}}
           nmake up
           nmake
@@ -465,7 +465,7 @@ jobs:
           YACC: bison
       - name: nmake test
         run: |
-          cd ruby-*
+          cd ruby-${{ github.event.inputs.TARGET_VERSION }}
           call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat" ${{ matrix.vcvars || '' }}
           nmake ${{ matrix.test_task }}
         shell: cmd
