@@ -445,19 +445,39 @@ jobs:
           path: pkg
       - name: Extract
         run: 7z x pkg/ruby-*.zip
-      - name: Find
-        run: find .
-        shell: bash
+
+      - name: setup env
+        # %TEMP% is inconsistent with %TMP% and test-all expects they are consistent.
+        # https://github.com/actions/virtual-environments/issues/712#issuecomment-613004302
+        run: |
+          if not "%VCVARS%" == "" goto :vcset
+            set VCVARS="C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+            if not exist %VCVARS% set VCVARS="C:\Program Files\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          :vcset
+          set | C:\msys64\usr\bin\sort > old.env
+          call %VCVARS% ${{ matrix.vcvars }}
+          set TMP=%USERPROFILE%\AppData\Local\Temp
+          set TEMP=%USERPROFILE%\AppData\Local\Temp
+          set /a TEST_JOBS=(15 * %NUMBER_OF_PROCESSORS% / 10) > nul
+          set | C:\msys64\usr\bin\sort > new.env
+          C:\msys64\usr\bin\comm -13 old.env new.env >> %GITHUB_ENV%
+          del *.env
+      - name: link libraries
+        run: |
+          for %%I in (C:\vcpkg\installed\x64-windows\bin\*.dll) do (
+            if not %%~nI == readline mklink %%~nxI %%I
+          )
+          for %%I in (libcrypto-1_1-x64 libssl-1_1-x64) do (
+            ren c:\Windows\System32\%%I.dll %%I.dll_
+          )
       - name: configure
         run: |
-          cd ruby-${{ github.event.inputs.TARGET_VERSION }}
-          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat" ${{ matrix.vcvars || ''}}
+          cd ruby-*
           win32/configure.bat --disable-install-doc --without-ext=+,dbm,gdbm --enable-bundled-libffi --with-opt-dir=C:/vcpkg/installed/x64-windows
         shell: cmd
       - name: nmake
         run: |
-          cd ruby-${{ github.event.inputs.TARGET_VERSION }}
-          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat" ${{ matrix.vcvars || ''}}
+          cd ruby-*
           nmake up
           nmake
         shell: cmd
@@ -465,8 +485,7 @@ jobs:
           YACC: bison
       - name: nmake test
         run: |
-          cd ruby-${{ github.event.inputs.TARGET_VERSION }}
-          call "C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat" ${{ matrix.vcvars || '' }}
+          cd ruby-*
           nmake ${{ matrix.test_task }}
         shell: cmd
         env:
