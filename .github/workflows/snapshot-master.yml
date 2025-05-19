@@ -406,6 +406,12 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
+      - uses: ruby/setup-ruby@e34163cd15f4bb403dcd72d98e295997e6a55798 # v1.238.0
+        with:
+          ruby-version: '3.1'
+          bundler: none
+          windows-toolchain: none
+
       - uses: msys2/setup-msys2@v2
         id: setup-msys2
         with:
