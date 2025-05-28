@@ -362,10 +362,10 @@ jobs:
         include:
           - os: 2022
             vs: 2022
-            vcvars: '10.0.22621.0 -vcvars_ver=14.2'
+            vcvars: '-vcvars_ver=14.2'
           - os: 2025
             vs: 2022
-            vcvars: '10.0.22621.0 -vcvars_ver=14.2'
+            vcvars: '-vcvars_ver=14.2'
       fail-fast: false
     runs-on: windows-${{ matrix.os }}
     defaults:
