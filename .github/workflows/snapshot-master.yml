@@ -427,13 +427,6 @@ jobs:
         if: ${{ steps.setup-msys2.outcome == 'success' }}
       - uses: actions/cache@v4
         with:
-          path: C:\vcpkg\downloads
-          key: ${{ runner.os }}-vcpkg-download-${{ env.OS_VER }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-vcpkg-download-${{ env.OS_VER }}-
-            ${{ runner.os }}-vcpkg-download-
-      - uses: actions/cache@v4
-        with:
           path: C:\vcpkg\installed
           key: ${{ runner.os }}-vcpkg-installed-${{ env.OS_VER }}-${{ github.sha }}
           restore-keys: |
