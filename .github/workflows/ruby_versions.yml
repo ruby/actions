@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       engine:
-        description: "The type of Ruby engine"
+        description: "The type of Ruby engine: all, cruby, cruby-jruby and cruby-truffleruby"
         default: "all"
         type: string
       versions:
