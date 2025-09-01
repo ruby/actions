@@ -22,7 +22,7 @@ jobs:
     env:
       archname: snapshot-ruby_3_3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/make-snapshot
         with:
           version: "3.3"
