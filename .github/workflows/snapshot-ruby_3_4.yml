@@ -106,7 +106,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: Packages
           path: pkg
@@ -312,7 +312,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: Packages
           path: pkg
@@ -445,7 +445,7 @@ jobs:
         run: |
           vcpkg --triplet x64-windows install libffi libyaml openssl readline zlib
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: Packages
           path: pkg
@@ -536,7 +536,7 @@ jobs:
     env:
       ruby_prefix: /tmp/ruby-snapshot
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: Packages
           path: pkg
