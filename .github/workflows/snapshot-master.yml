@@ -133,6 +133,7 @@ jobs:
         run: |
           mkdir -p $HOME/.local/share
           mkdir -p $HOME/.cache/gem/specs
+          mkdir -p $HOME/.gnupg/crls.d/private-keys-v1.d/public-keys.d
           mkdir -p $HOME/.bundle/cache
           mkdir -p $HOME/.ssh
           chmod a-w $HOME/.bundle
