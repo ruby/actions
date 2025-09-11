@@ -22,16 +22,16 @@ jobs:
     env:
       archname: snapshot-ruby_3_2
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: ./.github/actions/make-snapshot
         with:
           version: "3.2"
           fetch-branch: "ruby_3_2"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Packages
           path: pkg
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Info
           path: pkg/info
@@ -58,7 +58,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
         if: ${{ github.repository == 'ruby/actions' }}
-      - uses: ruby/action-slack@v3.2.2
+      - uses: ruby/action-slack@54175162371f1f7c8eb94d7c8644ee2479fcd375 # v3.2.2
         with:
           payload: |
             {
@@ -106,7 +106,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: Packages
           path: pkg
@@ -239,7 +239,7 @@ jobs:
         if: matrix.test_task == 'check'
       - name: Show .local
         run: find $HOME/.local -ls
-      - uses: ruby/action-slack@v3.2.2
+      - uses: ruby/action-slack@54175162371f1f7c8eb94d7c8644ee2479fcd375 # v3.2.2
         with:
           payload: |
             {
@@ -290,7 +290,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: Packages
           path: pkg
@@ -338,7 +338,7 @@ jobs:
       - name: ruby -v
         run: /usr/local/bin/ruby -v
         if: matrix.test_task == 'check'
-      - uses: ruby/action-slack@v3.2.2
+      - uses: ruby/action-slack@54175162371f1f7c8eb94d7c8644ee2479fcd375 # v3.2.2
         with:
           payload: |
             {
@@ -402,7 +402,7 @@ jobs:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
         run: echo "$MATRIX_CONTEXT"
 
-      - uses: msys2/setup-msys2@v2
+      - uses: msys2/setup-msys2@fb197b72ce45fb24f17bf3f807a388985654d1f2 # v2.29.0
         id: setup-msys2
         with:
           update: true
@@ -412,7 +412,7 @@ jobs:
         shell: msys2 {0}
         run: echo PATCH=$(cygpath -wa $(command -v patch)) >> $GITHUB_ENV
         if: ${{ steps.setup-msys2.outcome == 'success' }}
-      - uses: actions/cache@v4
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: C:\vcpkg\installed
           key: ${{ runner.os }}-vcpkg-installed-${{ env.OS_VER }}-${{ github.sha }}
@@ -423,7 +423,7 @@ jobs:
         run: |
           vcpkg --triplet x64-windows install libffi libyaml openssl readline zlib
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: Packages
           path: pkg
@@ -442,7 +442,7 @@ jobs:
         if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
         working-directory:
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: snapshot-*/.downloaded-cache
           key: downloaded-cache
@@ -495,7 +495,7 @@ jobs:
         timeout-minutes: 10
         continue-on-error: ${{ matrix.continue-on-error || false }}
 
-      - uses: ruby/action-slack@v3.2.2
+      - uses: ruby/action-slack@54175162371f1f7c8eb94d7c8644ee2479fcd375 # v3.2.2
         with:
           payload: |
             {
@@ -514,7 +514,7 @@ jobs:
     env:
       ruby_prefix: /tmp/ruby-snapshot
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: Packages
           path: pkg

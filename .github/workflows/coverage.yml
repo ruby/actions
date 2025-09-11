@@ -41,11 +41,11 @@ jobs:
         run: cd ruby && RUBY_TEST_TIMEOUT_SCALE=10 make -s check COVERAGE=true
       - name: Aggregate coverage results
         run: cd ruby && make lcov
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage-latest-html
           path: ruby/lcov-out
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: lcov-all.info
           path: ruby/lcov-all.info
