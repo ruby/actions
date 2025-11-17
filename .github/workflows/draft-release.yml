@@ -477,8 +477,6 @@ jobs:
       - name: nmake
         run: |
           cd ruby-*
-          nmake up
-          type revision.h
           nmake
         shell: cmd
         env:
