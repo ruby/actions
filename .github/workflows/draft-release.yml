@@ -50,14 +50,9 @@ jobs:
           git fetch origin +refs/notes/commits:refs/notes/commits
           git fetch origin +refs/notes/log-fix:refs/notes/log-fix
           popd
-          if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<3)"; then
-            ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
-            echo PACKAGE_EXTS=".tar.gz .tar.bz2 .tar.xz .zip" >> $GITHUB_ENV
-          else
-            # exclude bzip from -packages
-            ruby ruby/tool/make-snapshot -srcdir=ruby -packages=gzip,xz,zip pkg ${TARGET_VERSION}
-            echo PACKAGE_EXTS=".tar.gz .tar.xz .zip" >> $GITHUB_ENV
-          fi
+          # exclude bzip from -packages
+          ruby ruby/tool/make-snapshot -srcdir=ruby -packages=gzip,xz,zip pkg ${TARGET_VERSION}
+          echo PACKAGE_EXTS=".tar.gz .tar.xz .zip" >> $GITHUB_ENV
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: Packages
