@@ -43,26 +43,20 @@ jobs:
         run: |
           set -x
           GITHUB_REF_RUBY_RUBY=refs/tags/v$(echo $TARGET_VERSION | sed 'y/.-/__/')
-          if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<=2 && minor<7)"; then
-            # e.g. GITHUB_REF=refs/tags/draft/v2_6_4 -> TARGET_VERSION=2.6.4
-            ruby ruby/tool/make-snapshot -svn pkg ${TARGET_VERSION}
+          # e.g. GITHUB_REF=refs/tags/draft/v2_7_0_preview1 -> TARGET_VERSION=2.7.0-preview1
+          pushd ruby
+          git fetch --shallow-since='2018-12-25 00:00:00'
+          git fetch origin "+${GITHUB_REF_RUBY_RUBY}:${GITHUB_REF_RUBY_RUBY}"
+          git fetch origin +refs/notes/commits:refs/notes/commits
+          git fetch origin +refs/notes/log-fix:refs/notes/log-fix
+          popd
+          if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<3)"; then
+            ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
             echo PACKAGE_EXTS=".tar.gz .tar.bz2 .tar.xz .zip" >> $GITHUB_ENV
           else
-            # e.g. GITHUB_REF=refs/tags/draft/v2_7_0_preview1 -> TARGET_VERSION=2.7.0-preview1
-            pushd ruby
-            git fetch --shallow-since='2018-12-25 00:00:00'
-            git fetch origin "+${GITHUB_REF_RUBY_RUBY}:${GITHUB_REF_RUBY_RUBY}"
-            git fetch origin +refs/notes/commits:refs/notes/commits
-            git fetch origin +refs/notes/log-fix:refs/notes/log-fix
-            popd
-            if ruby -e "major, minor, = '${TARGET_VERSION}'.split('.').map(&:to_i); exit(major<3)"; then
-              ruby ruby/tool/make-snapshot -srcdir=ruby pkg ${TARGET_VERSION}
-              echo PACKAGE_EXTS=".tar.gz .tar.bz2 .tar.xz .zip" >> $GITHUB_ENV
-            else
-              # exclude bzip from -packages
-              ruby ruby/tool/make-snapshot -srcdir=ruby -packages=gzip,xz,zip pkg ${TARGET_VERSION}
-              echo PACKAGE_EXTS=".tar.gz .tar.xz .zip" >> $GITHUB_ENV
-            fi
+            # exclude bzip from -packages
+            ruby ruby/tool/make-snapshot -srcdir=ruby -packages=gzip,xz,zip pkg ${TARGET_VERSION}
+            echo PACKAGE_EXTS=".tar.gz .tar.xz .zip" >> $GITHUB_ENV
           fi
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
