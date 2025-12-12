@@ -42,7 +42,11 @@ jobs:
       - name: Make pkg
         run: |
           set -x
-          GITHUB_REF_RUBY_RUBY=refs/tags/v$(echo $TARGET_VERSION | sed 'y/.-/__/')
+          if ruby -e "major = Integer('${TARGET_VERSION}'.split('.', 2).first); exit(major>=4)"; then
+            GITHUB_REF_RUBY_RUBY="refs/tags/v${TARGET_VERSION}"
+          else
+            GITHUB_REF_RUBY_RUBY="refs/tags/v$(echo $TARGET_VERSION | sed 'y/.-/__/')"
+          fi
           # e.g. GITHUB_REF=refs/tags/draft/v2_7_0_preview1 -> TARGET_VERSION=2.7.0-preview1
           pushd ruby
           git fetch --shallow-since='2018-12-25 00:00:00'
