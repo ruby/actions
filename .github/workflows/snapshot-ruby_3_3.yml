@@ -258,7 +258,7 @@ jobs:
     strategy:
       matrix:
         test_task: [check, test-bundled-gems]
-        os: [macos-14] #, macos-15, macos-15-intel] We need to backport sigsegv workaround to macos-15 runners
+        os: [macos-14, macos-15, macos-15-intel]
         include:
           - os: macos-14
             test_task: test-bundler-parallel
