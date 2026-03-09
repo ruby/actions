@@ -20,7 +20,7 @@ def create_files
   json = JSON.parse(URI.open(RUBY_VERSIONS_FILE) {|f| f.read})
   cruby = parse_cruby(json)
   jruby = ["jruby", "jruby-head"]
-  truffleruby = ["truffleruby", "truffleruby-head"]
+  truffleruby = ["truffleruby"]
 
   File.open('cruby.json', 'w') do |f|
     f.puts cruby.to_json
