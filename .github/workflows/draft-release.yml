@@ -323,6 +323,7 @@ jobs:
           for formula in $(brew list 2>/dev/null | grep '^ruby'); do
             brew uninstall --force "$formula"
           done
+          sudo rm -rf /usr/local/lib/ruby
       - name: Set ENV
         run: |
           echo "JOBS=-j$((1 + $(sysctl -n hw.activecpu)))" >> $GITHUB_ENV
