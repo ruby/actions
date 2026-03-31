@@ -329,7 +329,12 @@ jobs:
           for formula in $(brew list 2>/dev/null | grep '^ruby'); do
             homebrew_ruby_bin="$(brew --prefix "$formula")/bin"
             if [ -d "$homebrew_ruby_bin" ]; then
-              echo "PATH=$(echo "$PATH" | sed "s|${homebrew_ruby_bin}:||g")" >> $GITHUB_ENV
+              gem_bin="$("${homebrew_ruby_bin}/ruby" -e 'puts Gem.bindir' 2>/dev/null)"
+              PATH="$(echo "$PATH" | sed "s|${homebrew_ruby_bin}:||g")"
+              if [ -n "$gem_bin" ] && [ -d "$gem_bin" ]; then
+                PATH="$(echo "$PATH" | sed "s|${gem_bin}:||g")"
+              fi
+              echo "PATH=$PATH" >> $GITHUB_ENV
             fi
           done
       - name: Set ENV
