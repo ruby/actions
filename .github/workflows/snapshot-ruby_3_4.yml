@@ -341,6 +341,7 @@ jobs:
             brew uninstall --force "$formula"
           done
           sudo rm -rf /usr/local/lib/ruby
+        if: matrix.os == 'macos-15-intel'
       - name: Set ENV
         run: |
           echo "JOBS=-j$((1 + $(sysctl -n hw.activecpu)))" >> $GITHUB_ENV
@@ -350,7 +351,7 @@ jobs:
         run: cd snapshot-*/ && make $JOBS
       - name: Reinstall Homebrew Ruby
         run: brew install ruby
-        if: matrix.test_task == 'test-bundled-gems' || matrix.test_task == 'test-bundler-parallel'
+        if: matrix.os == 'macos-15-intel' && (matrix.test_task == 'test-bundled-gems' || matrix.test_task == 'test-bundler-parallel')
       - name: Tests
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
