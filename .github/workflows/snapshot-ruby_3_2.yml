@@ -326,6 +326,9 @@ jobs:
         run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline) --with-libyaml-dir=$(brew --prefix libyaml)
       - name: make
         run: cd snapshot-*/ && make $JOBS
+      - name: Reinstall Homebrew Ruby
+        run: brew install ruby
+        if: matrix.test_task == 'test-bundled-gems' || matrix.test_task == 'test-bundler-parallel'
       - name: Tests
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
