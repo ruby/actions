@@ -439,7 +439,7 @@ jobs:
         shell: msys2 {0}
         run: echo PATCH=$(cygpath -wa $(command -v patch)) >> $GITHUB_ENV
         if: ${{ steps.setup-msys2.outcome == 'success' }}
-      - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: C:\vcpkg\installed
           key: ${{ runner.os }}-vcpkg-installed-${{ env.OS_VER }}-${{ github.sha }}
@@ -469,7 +469,7 @@ jobs:
         if: "${{ github.event.inputs.RUBY_PATCH_URL != '' }}"
         working-directory:
 
-      - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: snapshot-*/.downloaded-cache
           key: downloaded-cache
