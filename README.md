@@ -40,7 +40,7 @@ All snapshot and draft-release workflows also support `repository_dispatch` and 
 
 # How to trigger workflows
 
-## Run snapshot tests with a patch (workflow\_dispatch)
+## Run snapshot tests with a patch
 
 1. Open the workflow page, e.g. <https://github.com/ruby/actions/actions/workflows/snapshot-master.yml> or `snapshot-ruby_X_Y`
 2. Click **Run workflow** (next to "This workflow has a workflow\_dispatch event trigger.")
@@ -48,34 +48,16 @@ All snapshot and draft-release workflows also support `repository_dispatch` and 
 4. Enter a diff URL in **Patch URL** (e.g. `https://patch-diff.githubusercontent.com/raw/ruby/ruby/pull/4369.diff`). The workflow downloads it and applies it with `git apply`
 5. Click **Run workflow**
 
-## Trigger snapshots via API (repository\_dispatch)
-
-Use `tool/trigger-snapshot.sh`:
-
-```
-./tool/trigger-snapshot.sh                  # triggers all snapshot workflows (event_type: make-snapshot)
-./tool/trigger-snapshot.sh snapshot-master   # triggers only snapshot-master
-./tool/trigger-snapshot.sh snapshot-ruby_3_4 # triggers only snapshot-ruby_3_4
-```
-
-The script reads your GitHub token from `~/.config/gh/hosts.yml` or `~/.config/hub`.
-
 ## Create a draft release package
 
-Use `tool/trigger-draft-release.sh`:
-
-```
-./tool/trigger-draft-release.sh v3_4_0_rc1
-```
-
-This creates a temporary `draft/v3_4_0_rc1` tag, pushes it to trigger the `draft-release` workflow, and then removes the tag automatically.
+1. Open <https://github.com/ruby/actions/actions/workflows/draft-release.yml>
+2. Click **Run workflow**
+3. Enter the target version (e.g. `3.4.0-rc1`) in **Target version**
+4. Click **Run workflow**
 
 ## Remove temporary release packages
 
-Use `tool/trigger-remove-tmp.sh`:
-
-```
-./tool/trigger-remove-tmp.sh 3.4.0-rc1-draft
-```
-
-This triggers the `Remove pub/tmp/ruby-*` workflow to delete the specified draft package from S3 and purge CDN caches. The script reads your GitHub token from `~/.config/gh/hosts.yml` or `~/.config/hub`.
+1. Open <https://github.com/ruby/actions/actions/workflows/remove-tmp-package.yml>
+2. Click **Run workflow**
+3. Enter the version to remove (e.g. `3.4.0-rc1-draft`) in **Target version**
+4. Click **Run workflow**
