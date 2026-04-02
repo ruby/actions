@@ -16,20 +16,66 @@
 
 # ruby/actions
 
-This repository is automation tool for ruby workflows.
+This repository hosts GitHub Actions workflows that automate CRuby's release engineering, daily snapshot builds, documentation generation, and CI infrastructure.
 
-# TODO
+For release managers, see <https://bugs.ruby-lang.org/projects/ruby/wiki/HowToReleaseJa>.
 
-* Documentation :)
+# Workflows
 
-# Documentation for [release managers](https://bugs.ruby-lang.org/projects/ruby/wiki/ReleaseEngineering)
+| Workflow | Schedule | Description |
+|----------|----------|-------------|
+| `snapshot-master` | Daily 18:30 UTC | Build a snapshot tarball from the master branch, run tests on Ubuntu/macOS/Windows, and upload to S3 |
+| `snapshot-ruby_X_Y` | Daily 18:30 UTC | Same as above, but for each maintenance branch (ruby\_3\_3, ruby\_3\_4, ruby\_4\_0) |
+| `draft-release` | On `draft/v*` tag push | Create a draft release package, run multi-platform tests, upload to S3, and open a release PR on ruby/www.ruby-lang.org |
+| `Remove pub/tmp/ruby-*` | Manual | Remove temporary draft release packages from S3 and purge CDN caches |
+| `coverage` | Every 3 hours | Run the test suite with gcov coverage and upload reports to S3 |
+| `Make HTML for docs.r-l.o/en/` | Daily 13:00 UTC | Build HTML documentation for each Ruby version and upload to S3 |
+| `doxygen` | Every 3 hours | Generate C API documentation with Doxygen and upload to S3 |
+| `Update bundled_gems` | Daily 15:07 UTC | Check for bundled gem updates in ruby/ruby |
+| `ruby_versions` | Reusable workflow | Generate a matrix of Ruby versions for use in other workflows |
+| `update_ci_versions` | Daily 16:27 UTC | Update CI version configuration |
+| `update_index` | Hourly | Update the release index |
 
-See <https://bugs.ruby-lang.org/projects/ruby/wiki/HowToReleaseJa>
+All snapshot and draft-release workflows also support `repository_dispatch` and `workflow_dispatch` triggers for manual execution.
 
-# How to run tests of snapshot tarball with patch
+# How to trigger workflows
 
-* Open <https://github.com/ruby/actions/actions/workflows/snapshot-master.yml> or `snapshot-ruby_X_Y`
-* Click `Run workflow` (right of `This workflow has a workflow_dispatch event trigger.`)
-* DO NOT CHANGE: Use workflow from Branch: `master` means [ruby/actions](https://github.com/ruby/actions)'s master branch
-* Input diff URL to `Patch URL:` (for example: <https://patch-diff.githubusercontent.com/raw/ruby/ruby/pull/4369.diff> (redirect from <https://github.com/raw/ruby/ruby/pull/4369.diff>)) (Workflow downloads it and uses by `git apply`)
-* Click `Run workflow`
+## Run snapshot tests with a patch (workflow\_dispatch)
+
+1. Open the workflow page, e.g. <https://github.com/ruby/actions/actions/workflows/snapshot-master.yml> or `snapshot-ruby_X_Y`
+2. Click **Run workflow** (next to "This workflow has a workflow\_dispatch event trigger.")
+3. Leave "Use workflow from" as `master` — this refers to the [ruby/actions](https://github.com/ruby/actions) branch, not ruby/ruby
+4. Enter a diff URL in **Patch URL** (e.g. `https://patch-diff.githubusercontent.com/raw/ruby/ruby/pull/4369.diff`). The workflow downloads it and applies it with `git apply`
+5. Click **Run workflow**
+
+## Trigger snapshots via API (repository\_dispatch)
+
+Use `tool/trigger-snapshot.sh`:
+
+```
+./tool/trigger-snapshot.sh                  # triggers all snapshot workflows (event_type: make-snapshot)
+./tool/trigger-snapshot.sh snapshot-master   # triggers only snapshot-master
+./tool/trigger-snapshot.sh snapshot-ruby_3_4 # triggers only snapshot-ruby_3_4
+```
+
+The script reads your GitHub token from `~/.config/gh/hosts.yml` or `~/.config/hub`.
+
+## Create a draft release package
+
+Use `tool/trigger-draft-release.sh`:
+
+```
+./tool/trigger-draft-release.sh v3_4_0_rc1
+```
+
+This creates a temporary `draft/v3_4_0_rc1` tag, pushes it to trigger the `draft-release` workflow, and then removes the tag automatically.
+
+## Remove temporary release packages
+
+Use `tool/trigger-remove-tmp.sh`:
+
+```
+./tool/trigger-remove-tmp.sh 3.4.0-rc1-draft
+```
+
+This triggers the `Remove pub/tmp/ruby-*` workflow to delete the specified draft package from S3 and purge CDN caches. The script reads your GitHub token from `~/.config/gh/hosts.yml` or `~/.config/hub`.
