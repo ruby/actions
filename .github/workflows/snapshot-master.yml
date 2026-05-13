@@ -464,7 +464,7 @@ jobs:
         # https://github.com/actions/virtual-environments/issues/712#issuecomment-613004302
         run: |
           set | C:\msys64\usr\bin\sort > old.env
-          call ..\snapshot-master\win32\vssetup.cmd ${{ matrix.vcvars && '-vcvars_ver=' || '' }}${{ matrix.vcvars }}
+          call ..\snapshot-master\win32\vssetup.cmd
           set TMP=%USERPROFILE%\AppData\Local\Temp
           set TEMP=%USERPROFILE%\AppData\Local\Temp
           set /a TEST_JOBS=(15 * %NUMBER_OF_PROCESSORS% / 10) > nul
