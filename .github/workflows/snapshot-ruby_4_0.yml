@@ -370,9 +370,9 @@ jobs:
           - os: 2022
             vs: 2022
             vcvars: '-vcvars_ver=14.2'
-          - os: 2025
-            vs: 2022
-            vcvars: '-vcvars_ver=14.2'
+          - os: 2025-vs2026
+            vs: 2026
+            vcvars: ''
       fail-fast: false
     runs-on: windows-${{ matrix.os }}
     defaults:
