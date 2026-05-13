@@ -499,7 +499,7 @@ jobs:
         timeout-minutes: 5
       - run: nmake ${{ matrix.test_task }}
         env:
-          RUBY_TESTOPTS: -j${{env.TEST_JOBS}} --job-status=normal
+          RUBY_TESTOPTS: -j${{env.TEST_JOBS}}
         timeout-minutes: 70
         continue-on-error: ${{ matrix.continue-on-error || false }}
 
