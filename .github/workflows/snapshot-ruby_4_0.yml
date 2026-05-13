@@ -368,7 +368,6 @@ jobs:
       matrix:
         include:
           - os: 2022
-            vcvars: '14.2'
           - os: 2025-vs2026
       fail-fast: false
     runs-on: windows-${{ matrix.os }}
