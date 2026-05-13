@@ -365,18 +365,16 @@ jobs:
       matrix:
         include:
           - os: 2022
-            vs: 2022
-            vcvars: '-vcvars_ver=14.2'
-          - os: 2025
-            vs: 2022
-            vcvars: '-vcvars_ver=14.2'
+            test_task: check
+          - os: 2025-vs2026
+            test_task: check
       fail-fast: false
     runs-on: windows-${{ matrix.os }}
     defaults:
       run:
         shell: cmd
         working-directory: build
-    name: Windows ${{ matrix.os }}
+    name: Windows ${{ matrix.os }} (${{ matrix.test_task }})
     env:
       GITPULLOPTIONS: --no-tags origin ${{github.ref}}
       PATCH: C:\msys64\usr\bin\patch.exe
@@ -467,12 +465,8 @@ jobs:
         # %TEMP% is inconsistent with %TMP% and test-all expects they are consistent.
         # https://github.com/actions/virtual-environments/issues/712#issuecomment-613004302
         run: |
-          if not "%VCVARS%" == "" goto :vcset
-            set VCVARS="C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-            if not exist %VCVARS% set VCVARS="C:\Program Files\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          :vcset
           set | C:\msys64\usr\bin\sort > old.env
-          call %VCVARS% ${{ matrix.vcvars }}
+          call ..\snapshot-master\win32\vssetup.cmd
           set TMP=%USERPROFILE%\AppData\Local\Temp
           set TEMP=%USERPROFILE%\AppData\Local\Temp
           set /a TEST_JOBS=(15 * %NUMBER_OF_PROCESSORS% / 10) > nul
@@ -500,13 +494,10 @@ jobs:
 
       - run: nmake test
         timeout-minutes: 5
-      - run: nmake test-all
+      - run: nmake ${{ matrix.test_task }}
         env:
           RUBY_TESTOPTS: -j${{env.TEST_JOBS}} --job-status=normal
-        timeout-minutes: 60
-        continue-on-error: ${{ matrix.continue-on-error || false }}
-      - run: nmake test-spec
-        timeout-minutes: 10
+        timeout-minutes: 70
         continue-on-error: ${{ matrix.continue-on-error || false }}
 
       - uses: ruby/action-slack@54175162371f1f7c8eb94d7c8644ee2479fcd375 # v3.2.2
@@ -514,7 +505,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ env.OS_VER }} (vs${{ matrix.vs }}) <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "text": "${{ job.status }}: ${{ env.OS_VER }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }
