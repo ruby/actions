@@ -447,15 +447,23 @@ jobs:
             set VCVARS="C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
             if not exist %VCVARS% set VCVARS="C:\Program Files\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           :vcset
-          set | C:\msys64\usr\bin\sort > old.env
+          set > old.env
           call %VCVARS% ${{ matrix.vcvars }}
           set TMP=%USERPROFILE%\AppData\Local\Temp
           set TEMP=%USERPROFILE%\AppData\Local\Temp
           set /a TEST_JOBS=(15 * %NUMBER_OF_PROCESSORS% / 10) > nul
-          set | C:\msys64\usr\bin\sort > new.env
-          C:\msys64\usr\bin\comm -13 old.env new.env >> %GITHUB_ENV%
-          del *.env
+          set > new.env
         shell: cmd
+
+      - name: update env
+        shell: pwsh
+        run: |
+          $old = (Get-Content old.env); $new = (Get-Content new.env)
+          del *.env
+          Compare-Object $old $new |
+            Where-Object { $_.SideIndicator -eq '=>' } |
+            Select-Object -ExpandProperty InputObject |
+            Add-Content -Path $env:GITHUB_ENV
       - name: link libraries
         run: |
           for %%I in (C:\vcpkg\installed\x64-windows\bin\*.dll) do (
