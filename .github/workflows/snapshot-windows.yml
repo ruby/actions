@@ -23,7 +23,7 @@ jobs:
     strategy:
       matrix:
         include: ${{ fromJSON(inputs.mode == 'legacy'
-          && '[{"os":"2022","vs":2022,"vcvars":"10.0.22621.0 -vcvars_ver=14.2"}]'
+          && '[{"os":"2022","vs":2022,"vcvars":"10.0.22621.0 -vcvars_ver=14.2","test_task":"check"}]'
           || '[{"os":"2022","test_task":"check"},{"os":"2025-vs2026","test_task":"check"}]') }}
       fail-fast: false
     runs-on: windows-${{ matrix.os }}
@@ -31,7 +31,7 @@ jobs:
       run:
         shell: cmd
         working-directory: build
-    name: Windows ${{ matrix.os }}${{ inputs.mode == 'legacy' && '' || format(' ({0})', matrix.test_task) }}
+    name: Windows ${{ matrix.os }} (${{ matrix.test_task }})
     env:
       GITPULLOPTIONS: --no-tags origin ${{github.ref}}
       PATCH: C:\msys64\usr\bin\patch.exe
@@ -47,7 +47,6 @@ jobs:
           ruby-version: '3.1'
           bundler: none
           windows-toolchain: none
-        if: inputs.mode == 'modern'
 
       - uses: msys2/setup-msys2@e9898307ac31d1a803454791be09ab9973336e1c # v2.31.1
         id: setup-msys2
@@ -155,25 +154,13 @@ jobs:
           RUBY_TESTOPTS: -j${{env.TEST_JOBS}}
         timeout-minutes: 70
         continue-on-error: ${{ matrix.continue-on-error || false }}
-        if: inputs.mode == 'modern'
-
-      - run: nmake test-all
-        env:
-          RUBY_TESTOPTS: -j${{env.TEST_JOBS}} --job-status=normal
-        timeout-minutes: 60
-        continue-on-error: ${{ matrix.continue-on-error || false }}
-        if: inputs.mode == 'legacy'
-      - run: nmake test-spec
-        timeout-minutes: 10
-        continue-on-error: ${{ matrix.continue-on-error || false }}
-        if: inputs.mode == 'legacy'
 
       - uses: ruby/action-slack@54175162371f1f7c8eb94d7c8644ee2479fcd375 # v3.2.2
         with:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: ${{ env.OS_VER }}${{ inputs.mode == 'legacy' && format(' (vs{0})', matrix.vs) || format(' / {0}', matrix.test_task) }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "text": "${{ job.status }}: ${{ env.OS_VER }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }
