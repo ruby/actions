@@ -14,23 +14,14 @@ on:
         required: false
 
 jobs:
-  tarball:
-    runs-on: ubuntu-latest
-    env:
-      archname: snapshot-master
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: ./.github/actions/make-snapshot
-
   upload:
-    needs: tarball
     uses: ./.github/workflows/upload-tarball.yml
     with:
       archname: snapshot-master
     secrets: inherit
 
   ubuntu:
-    needs: tarball
+    needs: upload
     uses: ./.github/workflows/snapshot-ubuntu.yml
     with:
       archname: snapshot-master
@@ -42,7 +33,7 @@ jobs:
     secrets: inherit
 
   macos:
-    needs: tarball
+    needs: upload
     uses: ./.github/workflows/snapshot-macos.yml
     with:
       archname: snapshot-master
@@ -51,7 +42,7 @@ jobs:
     secrets: inherit
 
   windows:
-    needs: tarball
+    needs: upload
     uses: ./.github/workflows/snapshot-windows.yml
     with:
       archname: snapshot-master
@@ -60,6 +51,6 @@ jobs:
     secrets: inherit
 
   non_development:
-    needs: tarball
+    needs: upload
     uses: ./.github/workflows/snapshot-non-development.yml
     secrets: inherit

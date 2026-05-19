@@ -7,23 +7,59 @@ on:
         description: 'archname (e.g. snapshot-master, snapshot-ruby_3_3)'
         required: true
         type: string
+      version:
+        description: 'make-snapshot version (e.g. "3.3"). Empty for master.'
+        required: false
+        type: string
+        default: ''
+      fetch-branch:
+        description: 'git fetch branch (e.g. "ruby_3_3"). Empty for master.'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   upload:
     runs-on: ubuntu-latest
-    if: ${{ github.repository == 'ruby/actions' }}
     env:
       archname: ${{ inputs.archname }}
+      FETCH_BRANCH: ${{ inputs.fetch-branch }}
+      VERSION: ${{ inputs.version }}
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q || :
+          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
+      - name: Checkout ruby/ruby
+        run: git clone --single-branch --depth=1 https://github.com/ruby/ruby ruby
+      - name: Fetch branches and notes
+        run: |
+          set -x
+          cd ruby
+          git fetch --shallow-since='2018-12-25 00:00:00'
+          [ -n "$FETCH_BRANCH" ] && git fetch origin "+$FETCH_BRANCH:$FETCH_BRANCH"
+          git fetch origin '+refs/notes/commits:refs/notes/commits'
+          git fetch origin '+refs/notes/log-fix:refs/notes/log-fix'
+      - name: Make snapshot
+        run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby -packages=gzip,xz,zip pkg "$VERSION"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Packages
           path: pkg
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Info
           path: pkg/info
+      - name: Check pkg
+        run: |
+          set -x
+          ls -al pkg
+          7z x pkg/*.zip $archname/revision.h
+          cat $archname/revision.h
+          7z l pkg/*.zip $archname/ChangeLog
       - name: Upload s3
+        if: ${{ github.repository == 'ruby/actions' }}
         run: |
           set -x
           for ext in .tar.gz .tar.xz .zip; do
