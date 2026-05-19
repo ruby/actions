@@ -44,3 +44,11 @@ runs:
           ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby -packages=gzip,xz,zip pkg ${{ inputs.version }}
         fi
       shell: bash
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: Packages
+        path: pkg
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: Info
+        path: pkg/info

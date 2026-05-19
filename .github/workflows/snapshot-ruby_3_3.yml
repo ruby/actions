@@ -15,11 +15,21 @@ on:
 
 jobs:
   tarball:
-    uses: ./.github/workflows/snapshot-tarball.yml
+    runs-on: ubuntu-latest
+    env:
+      archname: snapshot-ruby_3_3
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: ./.github/actions/make-snapshot
+        with:
+          version: "3.3"
+          fetch-branch: ruby_3_3
+
+  upload:
+    needs: tarball
+    uses: ./.github/workflows/upload-tarball.yml
     with:
       archname: snapshot-ruby_3_3
-      version: "3.3"
-      fetch-branch: ruby_3_3
     secrets: inherit
 
   ubuntu:
