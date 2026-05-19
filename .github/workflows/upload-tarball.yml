@@ -1,30 +1,60 @@
-name: upload-tarball (reusable)
+name: upload-tarball
 
 on:
-  workflow_call:
+  schedule:
+    - cron: '30 18 * * *' # Daily at 18:30 UTC
+  repository_dispatch:
+    types:
+      - "make-snapshot"
+      - "snapshot-master"
+      - "snapshot-ruby_3_3"
+      - "snapshot-ruby_3_4"
+      - "snapshot-ruby_4_0"
+  workflow_dispatch:
     inputs:
-      archname:
-        description: 'archname (e.g. snapshot-master, snapshot-ruby_3_3)'
-        required: true
-        type: string
-      version:
-        description: 'make-snapshot version (e.g. "3.3"). Empty for master.'
-        required: false
-        type: string
-        default: ''
-      fetch-branch:
-        description: 'git fetch branch (e.g. "ruby_3_3"). Empty for master.'
-        required: false
-        type: string
-        default: ''
+      branch:
+        description: 'Target branch (default all)'
+        type: choice
+        options: [all, master, ruby_3_3, ruby_3_4, ruby_4_0]
+        default: all
 
 jobs:
-  upload:
+  matrix:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        env:
+          TARGET: ${{ inputs.branch || github.event.action || 'all' }}
+        run: |
+          set -eu
+          master='{"archname":"snapshot-master","version":"","fetch-branch":""}'
+          ruby_3_3='{"archname":"snapshot-ruby_3_3","version":"3.3","fetch-branch":"ruby_3_3"}'
+          ruby_3_4='{"archname":"snapshot-ruby_3_4","version":"3.4","fetch-branch":"ruby_3_4"}'
+          ruby_4_0='{"archname":"snapshot-ruby_4_0","version":"4.0","fetch-branch":"ruby_4_0"}'
+          all="[$master,$ruby_3_3,$ruby_3_4,$ruby_4_0]"
+          case "$TARGET" in
+            master|snapshot-master)       matrix="[$master]" ;;
+            ruby_3_3|snapshot-ruby_3_3)   matrix="[$ruby_3_3]" ;;
+            ruby_3_4|snapshot-ruby_3_4)   matrix="[$ruby_3_4]" ;;
+            ruby_4_0|snapshot-ruby_4_0)   matrix="[$ruby_4_0]" ;;
+            *)                            matrix="$all" ;;
+          esac
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  upload:
+    needs: matrix
+    if: ${{ github.repository == 'ruby/actions' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.matrix.outputs.matrix) }}
     env:
-      archname: ${{ inputs.archname }}
-      FETCH_BRANCH: ${{ inputs.fetch-branch }}
-      VERSION: ${{ inputs.version }}
+      archname: ${{ matrix.archname }}
+      FETCH_BRANCH: ${{ matrix.fetch-branch }}
+      VERSION: ${{ matrix.version }}
     steps:
       - name: Install libraries
         run: |
@@ -43,14 +73,6 @@ jobs:
           git fetch origin '+refs/notes/log-fix:refs/notes/log-fix'
       - name: Make snapshot
         run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby -packages=gzip,xz,zip pkg "$VERSION"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: Packages
-          path: pkg
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: Info
-          path: pkg/info
       - name: Check pkg
         run: |
           set -x
@@ -59,7 +81,6 @@ jobs:
           cat $archname/revision.h
           7z l pkg/*.zip $archname/ChangeLog
       - name: Upload s3
-        if: ${{ github.repository == 'ruby/actions' }}
         run: |
           set -x
           for ext in .tar.gz .tar.xz .zip; do
@@ -79,7 +100,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: upload-tarball <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "text": "${{ job.status }}: ${{ matrix.archname }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }
