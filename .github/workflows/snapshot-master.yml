@@ -14,14 +14,14 @@ on:
         required: false
 
 jobs:
-  make-snapshot:
-    uses: ./.github/workflows/snapshot-make.yml
+  tarball:
+    uses: ./.github/workflows/snapshot-tarball.yml
     with:
       archname: snapshot-master
     secrets: inherit
 
   ubuntu:
-    needs: make-snapshot
+    needs: tarball
     uses: ./.github/workflows/snapshot-ubuntu.yml
     with:
       archname: snapshot-master
@@ -33,7 +33,7 @@ jobs:
     secrets: inherit
 
   macos:
-    needs: make-snapshot
+    needs: tarball
     uses: ./.github/workflows/snapshot-macos.yml
     with:
       archname: snapshot-master
@@ -42,7 +42,7 @@ jobs:
     secrets: inherit
 
   windows:
-    needs: make-snapshot
+    needs: tarball
     uses: ./.github/workflows/snapshot-windows-modern.yml
     with:
       archname: snapshot-master
@@ -50,6 +50,6 @@ jobs:
     secrets: inherit
 
   non_development:
-    needs: make-snapshot
+    needs: tarball
     uses: ./.github/workflows/snapshot-non-development.yml
     secrets: inherit
