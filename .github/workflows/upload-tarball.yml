@@ -29,10 +29,10 @@ jobs:
           TARGET: ${{ inputs.branch || github.event.action || 'all' }}
         run: |
           set -eu
-          master='{"archname":"snapshot-master","version":"","fetch-branch":""}'
-          ruby_3_3='{"archname":"snapshot-ruby_3_3","version":"3.3","fetch-branch":"ruby_3_3"}'
-          ruby_3_4='{"archname":"snapshot-ruby_3_4","version":"3.4","fetch-branch":"ruby_3_4"}'
-          ruby_4_0='{"archname":"snapshot-ruby_4_0","version":"4.0","fetch-branch":"ruby_4_0"}'
+          master='{"archname":"snapshot-master","version":"","fetch_branch":""}'
+          ruby_3_3='{"archname":"snapshot-ruby_3_3","version":"3.3","fetch_branch":"ruby_3_3"}'
+          ruby_3_4='{"archname":"snapshot-ruby_3_4","version":"3.4","fetch_branch":"ruby_3_4"}'
+          ruby_4_0='{"archname":"snapshot-ruby_4_0","version":"4.0","fetch_branch":"ruby_4_0"}'
           all="[$master,$ruby_3_3,$ruby_3_4,$ruby_4_0]"
           case "$TARGET" in
             master|snapshot-master)       matrix="[$master]" ;;
@@ -53,7 +53,7 @@ jobs:
         include: ${{ fromJSON(needs.matrix.outputs.matrix) }}
     env:
       archname: ${{ matrix.archname }}
-      FETCH_BRANCH: ${{ matrix.fetch-branch }}
+      FETCH_BRANCH: ${{ matrix.fetch_branch }}
       VERSION: ${{ matrix.version }}
     steps:
       - name: Install libraries
@@ -72,7 +72,7 @@ jobs:
           git fetch origin '+refs/notes/commits:refs/notes/commits'
           git fetch origin '+refs/notes/log-fix:refs/notes/log-fix'
       - name: Make snapshot
-        run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby -packages=gzip,xz,zip pkg "$VERSION"
+        run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby -packages=gzip,xz,zip pkg $VERSION
       - name: Check pkg
         run: |
           set -x
