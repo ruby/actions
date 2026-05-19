@@ -43,10 +43,11 @@ jobs:
 
   windows:
     needs: tarball
-    uses: ./.github/workflows/snapshot-windows-modern.yml
+    uses: ./.github/workflows/snapshot-windows.yml
     with:
       archname: snapshot-master
       patch-url: ${{ inputs.RUBY_PATCH_URL }}
+      mode: modern
     secrets: inherit
 
   non_development:

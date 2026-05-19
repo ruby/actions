@@ -43,10 +43,11 @@ jobs:
 
   windows:
     needs: tarball
-    uses: ./.github/workflows/snapshot-windows-legacy.yml
+    uses: ./.github/workflows/snapshot-windows.yml
     with:
       archname: snapshot-ruby_3_4
       patch-url: ${{ inputs.RUBY_PATCH_URL }}
+      mode: legacy
     secrets: inherit
 
   non_development:
