@@ -1,0 +1,109 @@
+name: upload-tarball
+
+on:
+  schedule:
+    - cron: '30 18 * * *' # Daily at 18:30 UTC
+  repository_dispatch:
+    types:
+      - "make-snapshot"
+      - "snapshot-master"
+      - "snapshot-ruby_3_3"
+      - "snapshot-ruby_3_4"
+      - "snapshot-ruby_4_0"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Target branch (default all)'
+        type: choice
+        options: [all, master, ruby_3_3, ruby_3_4, ruby_4_0]
+        default: all
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        env:
+          TARGET: ${{ inputs.branch || github.event.action || 'all' }}
+        run: |
+          set -eu
+          master='{"archname":"snapshot-master","version":"","fetch_branch":""}'
+          ruby_3_3='{"archname":"snapshot-ruby_3_3","version":"3.3","fetch_branch":"ruby_3_3"}'
+          ruby_3_4='{"archname":"snapshot-ruby_3_4","version":"3.4","fetch_branch":"ruby_3_4"}'
+          ruby_4_0='{"archname":"snapshot-ruby_4_0","version":"4.0","fetch_branch":"ruby_4_0"}'
+          all="[$master,$ruby_3_3,$ruby_3_4,$ruby_4_0]"
+          case "$TARGET" in
+            master|snapshot-master)       matrix="[$master]" ;;
+            ruby_3_3|snapshot-ruby_3_3)   matrix="[$ruby_3_3]" ;;
+            ruby_3_4|snapshot-ruby_3_4)   matrix="[$ruby_3_4]" ;;
+            ruby_4_0|snapshot-ruby_4_0)   matrix="[$ruby_4_0]" ;;
+            *)                            matrix="$all" ;;
+          esac
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  upload:
+    needs: matrix
+    if: ${{ github.repository == 'ruby/actions' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    env:
+      archname: ${{ matrix.archname }}
+      FETCH_BRANCH: ${{ matrix.fetch_branch }}
+      VERSION: ${{ matrix.version }}
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q || :
+          sudo apt-get install --no-install-recommends -q -y build-essential git bison autoconf ruby p7zip-full curl
+      - name: Checkout ruby/ruby
+        run: git clone --single-branch --depth=1 https://github.com/ruby/ruby ruby
+      - name: Fetch branches and notes
+        run: |
+          set -x
+          cd ruby
+          git fetch --shallow-since='2018-12-25 00:00:00'
+          [ -n "$FETCH_BRANCH" ] && git fetch origin "+$FETCH_BRANCH:$FETCH_BRANCH"
+          git fetch origin '+refs/notes/commits:refs/notes/commits'
+          git fetch origin '+refs/notes/log-fix:refs/notes/log-fix'
+      - name: Make snapshot
+        run: ruby ruby/tool/make-snapshot -archname=$archname -srcdir=ruby -packages=gzip,xz,zip pkg $VERSION
+      - name: Check pkg
+        run: |
+          set -x
+          ls -al pkg
+          7z x pkg/*.zip $archname/revision.h
+          cat $archname/revision.h
+          7z l pkg/*.zip $archname/ChangeLog
+      - name: Upload s3
+        run: |
+          set -x
+          for ext in .tar.gz .tar.xz .zip; do
+            aws s3 cp "pkg/$archname$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/$archname$ext" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/$archname$ext"
+          done
+          for ext in .json .yml; do
+            aws s3 cp "pkg/info/info$ext" "s3://ftp.r-l.o/pub/ruby/snapshot/$archname$ext" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/ruby/snapshot/$archname$ext"
+          done
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+      - uses: ruby/action-slack@54175162371f1f7c8eb94d7c8644ee2479fcd375 # v3.2.2
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: ${{ matrix.archname }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
