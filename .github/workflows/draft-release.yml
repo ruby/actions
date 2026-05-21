@@ -3,65 +3,88 @@ name: Make draft release package
 on:
   push:
     tags:
-      - 'draft/v*' # e.g. draft/v2_6_4
+      - 'draft/v*' # e.g. draft/v3_4_0_rc1
   repository_dispatch:
     types:
-      - "refs/tags/v*" # e.g. refs/tags/v2_6_4
+      - "refs/tags/v*" # e.g. refs/tags/v3_4_0_rc1
   workflow_dispatch:
     inputs:
       TARGET_VERSION:
         description: Packaging target version
         required: true
-        default: 3.0.0-preview1
+        default: 3.4.0-rc1
 
 jobs:
-  make-snapshot:
+  info:
     runs-on: ubuntu-latest
+    outputs:
+      target_version: ${{ steps.set.outputs.target_version }}
+      archname: ${{ steps.set.outputs.archname }}
+      branch: ${{ steps.set.outputs.branch }}
+      fetch_ref: ${{ steps.set.outputs.fetch_ref }}
     steps:
-      - name: Set TARGET_VERSION and FETCH_REF
+      - id: set
+        env:
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          INPUT_TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION }}
         run: |
-          if [ -z "$TARGET_VERSION" ]; then
-            GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-            TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
+          set -eu
+          if [ -n "$INPUT_TARGET_VERSION" ]; then
+            TARGET_VERSION="$INPUT_TARGET_VERSION"
+          else
+            REF=${GITHUB_EVENT_ACTION:-$(echo "$GITHUB_REF" | sed -e "s#/draft/#/#")}
+            TARGET_VERSION=$(echo "$REF" | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
           fi
+          # Preview tags are typically cut before the release branch exists,
+          # so route them to master. Other versions map to ruby_X_Y.
+          case "$TARGET_VERSION" in
+            *preview*)
+              BRANCH=master
+              ;;
+            *)
+              MAJOR=$(echo "$TARGET_VERSION" | cut -d. -f1)
+              MINOR=$(echo "$TARGET_VERSION" | cut -d. -f2)
+              BRANCH="ruby_${MAJOR}_${MINOR}"
+              ;;
+          esac
+          # Tag refspec used by tool/make-snapshot fetch
           if ruby -e "major = Integer('${TARGET_VERSION}'.split('.', 2).first); exit(major>=4)"; then
             FETCH_REF="refs/tags/v${TARGET_VERSION}"
           else
             FETCH_REF="refs/tags/v$(echo $TARGET_VERSION | sed 'y/.-/__/')"
           fi
-          # e.g. GITHUB_REF=refs/tags/draft/v2_7_0_preview1 -> TARGET_VERSION=2.7.0-preview1
-          {
-            echo TARGET_VERSION="$TARGET_VERSION"
-            echo PACKAGE_EXTS=".tar.gz .tar.xz .zip"
-          } >> $GITHUB_ENV
           {
             echo "target_version=$TARGET_VERSION"
+            echo "archname=ruby-${TARGET_VERSION}"
+            echo "branch=$BRANCH"
             echo "fetch_ref=$FETCH_REF"
           } >> "$GITHUB_OUTPUT"
-        shell: bash
-        id: info
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }} # repository_dispatch
-          TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION }} # workflow_dispatch
 
+  tarball:
+    needs: info
+    runs-on: ubuntu-latest
+    env:
+      TARGET_VERSION: ${{ needs.info.outputs.target_version }}
+      archname: ${{ needs.info.outputs.archname }}
+    steps:
       - uses: ruby/ruby/.github/actions/make-snapshot@master
         with:
-          archname: ruby-${{ steps.info.outputs.target_version }}
-          version: ${{ steps.info.outputs.target_version }}
-          fetch-branch: ${{ steps.info.outputs.fetch_ref }}
+          archname: ${{ needs.info.outputs.archname }}
+          version: ${{ needs.info.outputs.target_version }}
+          fetch-branch: ${{ needs.info.outputs.fetch_ref }}
       - name: Check pkg
         run: |
           set -x
           ls -al pkg
-          7z x pkg/ruby-${TARGET_VERSION}.zip ruby-${TARGET_VERSION}/revision.h
-          cat ruby-${TARGET_VERSION}/revision.h
-          7z l pkg/ruby-${TARGET_VERSION}.zip ruby-${TARGET_VERSION}/ChangeLog
+          7z x pkg/${archname}.zip ${archname}/revision.h
+          cat ${archname}/revision.h
+          7z l pkg/${archname}.zip ${archname}/ChangeLog
       - name: Upload s3
         run: |
           set -x
-          for ext in $PACKAGE_EXTS; do
-            aws s3 cp "pkg/ruby-${TARGET_VERSION}$ext" "s3://ftp.r-l.o/pub/tmp/ruby-${TARGET_VERSION}-draft$ext" --no-progress
-            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-${TARGET_VERSION}-draft$ext"
+          for ext in .tar.gz .tar.xz .zip; do
+            aws s3 cp "pkg/${archname}$ext" "s3://ftp.r-l.o/pub/tmp/${archname}-draft$ext" --no-progress
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/${archname}-draft$ext"
           done
           aws s3 cp "pkg/info/info.yml" "s3://ftp.r-l.o/pub/tmp/ruby-info-${TARGET_VERSION}-draft.yml" --no-progress
           curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-info-${TARGET_VERSION}-draft.yml"
@@ -75,449 +98,152 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "title": "Build Draft Release ${{ steps.info.outputs.target_version }}",
+                "title": "Build Draft Release ${{ needs.info.outputs.target_version }}",
                 "title_link": "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ steps.info.outputs.target_version }}>",
-                "color": "danger"
+                "text": "${{ job.status }}: tarball <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ needs.info.outputs.target_version }}>",
+                "color": "${{ job.status == 'success' && 'good' || 'danger' }}"
               }]
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
-        if: failure()
-      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
-        with:
-          payload: |
-            {
-              "attachments": [{
-                "title": "Build Draft Release ${{ steps.info.outputs.target_version }}",
-                "title_link": "https://cache.ruby-lang.org/pub/tmp/",
-                "text": "${{ job.status }}: make-snapshot <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ steps.info.outputs.target_version }}>",
-                "color": "good"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
-        if: success()
+        if: always()
 
-  ubuntu:
-    needs: make-snapshot
-    strategy:
-      matrix:
-        test_task: [check, test-bundler-parallel, test-bundled-gems]
-        os: [ubuntu-24.04, ubuntu-22.04]
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Set TARGET_VERSION
-        run: |
-          if [ -z "$TARGET_VERSION" ]; then
-            GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-            TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          fi
-          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
-          echo "target_version=$TARGET_VERSION" >> "$GITHUB_OUTPUT"
-        shell: bash
-        id: info
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }} # repository_dispatch
-          TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION }} # workflow_dispatch
+  # Per-OS tests via ruby/ruby's tarball-*.yml reusables, grouped by Ruby
+  # branch. GitHub Actions does not allow expressions in
+  # uses: org/repo/path@ref, so we enumerate per-branch jobs and gate them by
+  # needs.info.outputs.branch. Add or drop a whole branch as one block.
 
-      - run: env | sort
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - name: Dump job context
-        env:
-          JOB_CONTEXT: ${{ toJson(job) }}
-        run: echo "$JOB_CONTEXT"
-      - name: Dump steps context
-        env:
-          STEPS_CONTEXT: ${{ toJson(steps) }}
-        run: echo "$STEPS_CONTEXT"
-      - name: Dump runner context
-        env:
-          RUNNER_CONTEXT: ${{ toJson(runner) }}
-        run: echo "$RUNNER_CONTEXT"
-      - name: Dump strategy context
-        env:
-          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
-        run: echo "$STRATEGY_CONTEXT"
-      - name: Dump matrix context
-        env:
-          MATRIX_CONTEXT: ${{ toJson(matrix) }}
-        run: echo "$MATRIX_CONTEXT"
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: Packages
-          path: pkg
-      - name: Extract
-        run: tar xf pkg/ruby-*.tar.xz
-      - name: Install libraries
-        run: |
-          set -x
-          sudo apt-get update -q || :
-          # postfix `-` means `uninstall`
-          APT_INSTALL_RUBY=ruby-
-          APT_INSTALL_GIT=git-
-          case "${{ matrix.test_task }}" in
-            test-bundled-gems)
-              # test-bundled-gems requires executable host ruby
-              APT_INSTALL_RUBY=ruby
-              # test-bundled-gems-fetch requires git
-              unset APT_INSTALL_GIT
-              ;;
-            test-bundler*)
-              # avoid Bundler::Source::Git::GitNotInstalledError
-              unset APT_INSTALL_GIT
-              ;;
-            *)
-              ;;
-          esac
-          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev bison- autoconf- $APT_INSTALL_RUBY $APT_INSTALL_GIT
-      - uses: ruby/setup-ruby@afeafc3d1ab54a631816aba4c914a0081c12ff2f # v1.310.0
-        with:
-          ruby-version: 3.2
-        # test-bundled-gems requires executable host ruby
-        if: "${{ matrix.test_task == 'test-bundled-gems' }}"
-      - name: Fixed world writable dirs
-        run: |
-          mkdir -p $HOME/.gem
-          chmod -v a-w $HOME $HOME/.config
-          sudo chmod -R a-w /usr/share
-          sudo bash -c 'IFS=:; for d in '"$PATH"'; do chmod -v a-w $d; done' || :
-      - name: mkdir ~/.local
-        run: ls -al $HOME && sudo mkdir -p $HOME/.local && sudo chown $USER $HOME/.local
-      - name: mkdir ~/.cache
-        run: ls -al $HOME && sudo mkdir -p $HOME/.cache && sudo chown $USER $HOME/.cache
-      - name: Set ENV
-        run: |
-          echo "JOBS=-j$((1 + $(nproc --all)))" >> $GITHUB_ENV
-      - name: configure
-        run: cd ruby-*/ && ./configure
-      - name: make
-        run: cd ruby-*/ && make $JOBS
-      - name: Tests
-        run: |
-          cd ruby-*/ && env -u XDG_CONFIG_HOME make $JOBS -s ${{ matrix.test_task }}
-        env:
-          MSPECOPT: "-j"
-          RUBY_TESTOPTS: "-q --tty=no"
-      - name: make install without root privilege
-        run: cd ruby-*/ && make $JOBS install DESTDIR="/tmp/destdir"
-        if: matrix.test_task == 'check'
-      - name: make install
-        run: cd ruby-*/ && sudo make $JOBS install
-        if: matrix.test_task == 'check'
-      - name: ruby -v
-        run: ruby -v
-        if: matrix.test_task == 'check'
-      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
-        with:
-          payload: |
-            {
-              "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ steps.info.outputs.target_version }}>",
-                "color": "danger"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
-        if: failure()
-      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
-        with:
-          payload: |
-            {
-              "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ steps.info.outputs.target_version }}>",
-                "color": "good"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
-        if: success()
+  # master
+  ubuntu-master:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'master'
+    uses: ruby/ruby/.github/workflows/tarball-ubuntu.yml@master
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+      allow-failures: power_assert
+      remove-gnupg: true
+      notify-ruby-sha: true
+      branch-label: master
+    secrets: inherit
+  macos-master:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'master'
+    uses: ruby/ruby/.github/workflows/tarball-macos.yml@master
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+      allow-failures: power_assert
+    secrets: inherit
+  windows-master:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'master'
+    uses: ruby/ruby/.github/workflows/tarball-windows.yml@master
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+    secrets: inherit
 
-  macos:
-    needs: make-snapshot
-    strategy:
-      matrix:
-        test_task: [check, test-bundled-gems]
-        os: [macos-14, macos-15, macos-15-intel]
-        include:
-          - os: macos-14
-            test_task: test-bundler-parallel
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Set TARGET_VERSION
-        run: |
-          if [ -z "$TARGET_VERSION" ]; then
-            GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-            TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          fi
-          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
-          echo "target_version=$TARGET_VERSION" >> "$GITHUB_OUTPUT"
-        shell: bash
-        id: info
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }} # repository_dispatch
-          TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION }} # workflow_dispatch
+  # ruby_4_0
+  ubuntu-ruby_4_0:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'ruby_4_0'
+    uses: ruby/ruby/.github/workflows/tarball-ubuntu.yml@ruby_4_0
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+      allow-failures: power_assert
+      remove-gnupg: true
+      notify-ruby-sha: true
+      branch-label: ${{ needs.info.outputs.branch }}
+    secrets: inherit
+  macos-ruby_4_0:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'ruby_4_0'
+    uses: ruby/ruby/.github/workflows/tarball-macos.yml@ruby_4_0
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+      allow-failures: power_assert
+    secrets: inherit
+  windows-ruby_4_0:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'ruby_4_0'
+    uses: ruby/ruby/.github/workflows/tarball-windows.yml@ruby_4_0
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+    secrets: inherit
 
-      - run: env | sort
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - name: Dump job context
-        env:
-          JOB_CONTEXT: ${{ toJson(job) }}
-        run: echo "$JOB_CONTEXT"
-      - name: Dump steps context
-        env:
-          STEPS_CONTEXT: ${{ toJson(steps) }}
-        run: echo "$STEPS_CONTEXT"
-      - name: Dump runner context
-        env:
-          RUNNER_CONTEXT: ${{ toJson(runner) }}
-        run: echo "$RUNNER_CONTEXT"
-      - name: Dump strategy context
-        env:
-          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
-        run: echo "$STRATEGY_CONTEXT"
-      - name: Dump matrix context
-        env:
-          MATRIX_CONTEXT: ${{ toJson(matrix) }}
-        run: echo "$MATRIX_CONTEXT"
+  # ruby_3_4
+  ubuntu-ruby_3_4:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'ruby_3_4'
+    uses: ruby/ruby/.github/workflows/tarball-ubuntu.yml@ruby_3_4
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+      apt-mode: git-only
+      notify-ruby-sha: true
+      branch-label: ${{ needs.info.outputs.branch }}
+    secrets: inherit
+  macos-ruby_3_4:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'ruby_3_4'
+    uses: ruby/ruby/.github/workflows/tarball-macos.yml@ruby_3_4
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+    secrets: inherit
+  windows-ruby_3_4:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'ruby_3_4'
+    uses: ruby/ruby/.github/workflows/tarball-windows.yml@ruby_3_4
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+    secrets: inherit
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: Packages
-          path: pkg
-      - name: Extract
-        run: tar xf pkg/ruby-*.tar.xz
-      - name: Install libraries
-        run: |
-          with_retry () {
-            "$@" || { sleep 5 && "$@"; } || { sleep 60 && "$@"; }
-          }
-          set -x
-          with_retry brew install gdbm gmp libffi openssl@1.1 zlib autoconf automake libtool readline
-      - name: Set ENV
-        run: |
-          echo "JOBS=-j$((1 + $(sysctl -n hw.activecpu)))" >> $GITHUB_ENV
-      - name: configure
-        run: cd ruby-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
-      - name: make
-        run: cd ruby-*/ && make $JOBS
-      - name: Tests
-        run: |
-          case "$TARGET_VERSION" in
-            2.6.*)
-              test "${{ matrix.test_task }}" = test-bundler && exit
-              test "${{ matrix.test_task }}" = test-bundled-gems && exit
-              ;;
-          esac
-          cd ruby-*/ && make $JOBS -s ${{ matrix.test_task }}
-        env:
-          MSPECOPT: "-ff" # not using `-j` because sometimes `mspec -j` silently dies (for ruby < 2.7)
-          RUBY_TESTOPTS: "-q --tty=no"
-      - name: make install without root privilege
-        run: cd ruby-*/ && make $JOBS install DESTDIR="/tmp/destdir"
-        if: matrix.test_task == 'check'
-      - name: make install
-        run: cd ruby-*/ && sudo make $JOBS install
-        if: matrix.test_task == 'check'
-      - name: ruby -v
-        run: /usr/local/bin/ruby -v
-        if: matrix.test_task == 'check'
-      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
-        with:
-          payload: |
-            {
-              "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ steps.info.outputs.target_version }}>",
-                "color": "danger"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
-        if: failure()
-      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
-        with:
-          payload: |
-            {
-              "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ steps.info.outputs.target_version }}>",
-                "color": "good"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
-        if: success()
-
-  windows:
-    needs: make-snapshot
-    strategy:
-      matrix:
-        os: [windows-2022]
-        vs: [2022]
-        vcvars: ['10.0.22621.0 -vcvars_ver=14.2']
-        test_task: [test]
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    env:
-      PATCH: C:\msys64\usr\bin\patch.exe
-    steps:
-      - name: Set TARGET_VERSION
-        run: |
-          if [ -z "$TARGET_VERSION" ]; then
-            GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-            TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          fi
-          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
-          echo "target_version=$TARGET_VERSION" >> "$GITHUB_OUTPUT"
-        shell: bash
-        id: info
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }} # repository_dispatch
-          TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION }} # workflow_dispatch
-
-      - run: env | sort
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - name: Dump job context
-        env:
-          JOB_CONTEXT: ${{ toJson(job) }}
-        run: echo "$JOB_CONTEXT"
-      - name: Dump steps context
-        env:
-          STEPS_CONTEXT: ${{ toJson(steps) }}
-        run: echo "$STEPS_CONTEXT"
-      - name: Dump runner context
-        env:
-          RUNNER_CONTEXT: ${{ toJson(runner) }}
-        run: echo "$RUNNER_CONTEXT"
-      - name: Dump strategy context
-        env:
-          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
-        run: echo "$STRATEGY_CONTEXT"
-      - name: Dump matrix context
-        env:
-          MATRIX_CONTEXT: ${{ toJson(matrix) }}
-        run: echo "$MATRIX_CONTEXT"
-      - uses: msys2/setup-msys2@e9898307ac31d1a803454791be09ab9973336e1c # v2.31.1
-        id: setup-msys2
-        with:
-          update: true
-          install: >-
-            bison
-      - name: Install libraries with vcpkg
-        run: |
-          vcpkg --triplet x64-windows install readline openssl zlib
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: Packages
-          path: pkg
-      - name: Extract
-        run: 7z x pkg/ruby-*.zip
-
-      - name: setup env
-        # %TEMP% is inconsistent with %TMP% and test-all expects they are consistent.
-        # https://github.com/actions/virtual-environments/issues/712#issuecomment-613004302
-        run: |
-          if not "%VCVARS%" == "" goto :vcset
-            set VCVARS="C:\Program Files (x86)\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-            if not exist %VCVARS% set VCVARS="C:\Program Files\Microsoft Visual Studio\${{ matrix.vs }}\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          :vcset
-          set > old.env
-          call %VCVARS% ${{ matrix.vcvars }}
-          set TMP=%USERPROFILE%\AppData\Local\Temp
-          set TEMP=%USERPROFILE%\AppData\Local\Temp
-          set /a TEST_JOBS=(15 * %NUMBER_OF_PROCESSORS% / 10) > nul
-          set > new.env
-        shell: cmd
-
-      - name: update env
-        shell: pwsh
-        run: |
-          $old = (Get-Content old.env); $new = (Get-Content new.env)
-          del *.env
-          Compare-Object $old $new |
-            Where-Object { $_.SideIndicator -eq '=>' } |
-            Select-Object -ExpandProperty InputObject |
-            Add-Content -Path $env:GITHUB_ENV
-      - name: link libraries
-        run: |
-          for %%I in (C:\vcpkg\installed\x64-windows\bin\*.dll) do (
-            if not %%~nI == readline mklink %%~nxI %%I
-          )
-        shell: cmd
-      - name: configure
-        run: |
-          cd ruby-*
-          win32/configure.bat --disable-install-doc --without-ext=+,dbm,gdbm --enable-bundled-libffi --with-opt-dir=C:/vcpkg/installed/x64-windows
-        shell: cmd
-      - name: nmake
-        run: |
-          cd ruby-*
-          nmake
-        shell: cmd
-        env:
-          YACC: bison
-      - name: nmake test
-        run: |
-          cd ruby-*
-          nmake ${{ matrix.test_task }}
-        shell: cmd
-        env:
-          YACC: bison
-      - name: ruby -v
-        run: |
-          cd ruby-*
-          .\ruby -v
-      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
-        with:
-          payload: |
-            {
-              "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ steps.info.outputs.target_version }}>",
-                "color": "danger"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
-        if: failure()
-      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
-        with:
-          payload: |
-            {
-              "attachments": [{
-                "text": "${{ job.status }}: ${{ matrix.os }} (vs${{ matrix.vs }}) / ${{ matrix.test_task }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ steps.info.outputs.target_version }}>",
-                "color": "good"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
-        if: success()
+  # ruby_3_3
+  ubuntu-ruby_3_3:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'ruby_3_3'
+    uses: ruby/ruby/.github/workflows/tarball-ubuntu.yml@ruby_3_3
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+      apt-mode: ruby-and-git
+      setup-host-ruby: false
+      fixed-dirs-extra: false
+      ruby-bin: ruby
+    secrets: inherit
+  macos-ruby_3_3:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'ruby_3_3'
+    uses: ruby/ruby/.github/workflows/tarball-macos.yml@ruby_3_3
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+      rebuild-homebrew-ruby: true
+    secrets: inherit
+  windows-ruby_3_3:
+    needs: [info, tarball]
+    if: needs.info.outputs.branch == 'ruby_3_3'
+    uses: ruby/ruby/.github/workflows/tarball-windows.yml@ruby_3_3
+    with:
+      archname: ${{ needs.info.outputs.archname }}
+    secrets: inherit
 
   release:
-    needs: [ubuntu, macos, windows]
+    needs:
+      - info
+      - tarball
+      - ubuntu-master
+      - macos-master
+      - windows-master
+      - ubuntu-ruby_4_0
+      - macos-ruby_4_0
+      - windows-ruby_4_0
+      - ubuntu-ruby_3_4
+      - macos-ruby_3_4
+      - windows-ruby_3_4
+      - ubuntu-ruby_3_3
+      - macos-ruby_3_3
+      - windows-ruby_3_3
+    if: always() && needs.tarball.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
+    env:
+      TARGET_VERSION: ${{ needs.info.outputs.target_version }}
     steps:
-      - name: Set TARGET_VERSION
-        run: |
-          if [ -z "$TARGET_VERSION" ]; then
-            GITHUB_REF=${GITHUB_EVENT_ACTION:-$(echo $GITHUB_REF | sed -e "s#/draft/#/#")}
-            TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
-          fi
-          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
-        shell: bash
-        env:
-          GITHUB_EVENT_ACTION: ${{ github.event.action }} # repository_dispatch
-          TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION }} # workflow_dispatch
-
       - name: Create a release pull-request on GitHub
         run: |
           curl -L -X POST \
@@ -525,4 +251,4 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/ruby/www.ruby-lang.org/dispatches \
-            -d '{"event_type": "release", "client_payload": {"version": "${{ env.TARGET_VERSION }}"}}'
+            -d "{\"event_type\": \"release\", \"client_payload\": {\"version\": \"${TARGET_VERSION}\"}}"
