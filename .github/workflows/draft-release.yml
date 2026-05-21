@@ -115,7 +115,7 @@ jobs:
             TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
           fi
           echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
-          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_OUTPUT
+          echo "target_version=$TARGET_VERSION" >> "$GITHUB_OUTPUT"
         shell: bash
         id: info
         env:
@@ -256,7 +256,7 @@ jobs:
             TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
           fi
           echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
-          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_OUTPUT
+          echo "target_version=$TARGET_VERSION" >> "$GITHUB_OUTPUT"
         shell: bash
         id: info
         env:
@@ -375,7 +375,7 @@ jobs:
             TARGET_VERSION=$(echo $GITHUB_REF | sed -e "s#refs/tags/v##" -e "s/_\([a-z]\)/-\1/" -e "y/_/./")
           fi
           echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_ENV
-          echo TARGET_VERSION="$TARGET_VERSION" >> $GITHUB_OUTPUT
+          echo "target_version=$TARGET_VERSION" >> "$GITHUB_OUTPUT"
         shell: bash
         id: info
         env:
