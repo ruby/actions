@@ -6,6 +6,9 @@ on:
     types: "doxygen"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   latest:
     runs-on: ubuntu-latest
