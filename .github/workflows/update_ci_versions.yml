@@ -6,6 +6,9 @@ on:
   repository_dispatch:
     types: "update_ci_versions"
 
+permissions:
+  contents: read
+
 jobs:
   update_ci_versions:
     runs-on: ubuntu-latest

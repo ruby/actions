@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '15 7 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   Update-bundled_gems:
 

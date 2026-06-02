@@ -7,6 +7,9 @@ on:
     types: "update_index"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   update_index:
     runs-on: ubuntu-latest
