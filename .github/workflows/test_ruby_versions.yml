@@ -10,6 +10,9 @@ on:
       - '.github/workflows/ruby_versions.yml'
       - '.github/workflows/test_ruby_versions.yml'
 
+permissions:
+  contents: read
+
 jobs:
   call_defaults:
     uses: ./.github/workflows/ruby_versions.yml
