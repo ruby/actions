@@ -110,7 +110,7 @@ jobs:
         # needs to bundle vcruntime140*.dll.
         run: |
           set > old.env
-          for /f "usebackq delims=" %%I in (`vswhere.exe -latest -property installationPath`) do @call "%%I\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+          for /f "usebackq delims=" %%I in (`vswhere.exe -latest -products * -property installationPath`) do @call "%%I\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
           set TMP=%RUNNER_TEMP%
           set TEMP=%RUNNER_TEMP%
           set > new.env
