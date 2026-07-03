@@ -1,0 +1,22 @@
+name: mswin-release
+
+# Build a relocatable mswin binary zip from an official release
+# tarball.  Works for Ruby 3.3 and later.  The heavy lifting lives in
+# mswin-build.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      TARGET_VERSION:
+        description: Packaging target version (e.g. 3.4.5)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/mswin-build.yml
+    with:
+      version: ${{ inputs.TARGET_VERSION }}
+    secrets: inherit

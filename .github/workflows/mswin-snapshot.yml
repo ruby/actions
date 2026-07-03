@@ -1,0 +1,18 @@
+name: mswin-snapshot
+
+# Daily dev build of the master branch as a relocatable mswin binary
+# zip.  The heavy lifting lives in mswin-build.yml.
+
+on:
+  schedule:
+    - cron: '30 19 * * *' # Daily at 19:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'schedule' || github.repository == 'ruby/actions' }}
+    uses: ./.github/workflows/mswin-build.yml
+    secrets: inherit

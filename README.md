@@ -26,6 +26,8 @@ For release managers, see <https://bugs.ruby-lang.org/projects/ruby/wiki/HowToRe
 | `snapshot-master` | Daily 18:30 UTC | Build a snapshot tarball from the master branch, run tests on Ubuntu/macOS/Windows, and upload to S3 |
 | `snapshot-ruby_X_Y` | Daily 18:30 UTC | Same as above, but for each maintenance branch (ruby\_3\_3, ruby\_3\_4, ruby\_4\_0) |
 | `draft-release` | On `draft/v*` tag push | Create a draft release package, run multi-platform tests, upload to S3, and open a release PR on ruby/www.ruby-lang.org |
+| `mswin-snapshot` | Daily 19:30 UTC | Build a relocatable Windows (mswin) binary zip from the master branch and upload it as an Actions artifact |
+| `mswin-release` | Manual | Build a relocatable Windows (mswin) binary zip from an official release tarball (Ruby 3.3 or later) |
 | `Remove pub/tmp/ruby-*` | Manual | Remove temporary draft release packages from S3 and purge CDN caches |
 | `coverage` | Every 3 hours | Run the test suite with gcov coverage and upload reports to S3 |
 | `Make HTML for docs.r-l.o/en/` | Daily 13:00 UTC | Build HTML documentation for each Ruby version and upload to S3 |
@@ -36,6 +38,19 @@ For release managers, see <https://bugs.ruby-lang.org/projects/ruby/wiki/HowToRe
 | `update_index` | Hourly | Update the release index |
 
 All snapshot and draft-release workflows also support `repository_dispatch` and `workflow_dispatch` triggers for manual execution.
+
+# mswin binary packages
+
+The `mswin-snapshot` and `mswin-release` workflows build relocatable binary zip packages for Windows (x64-mswin64\_140) through the shared `mswin-build` reusable workflow. The zip layout is a public contract for tooling that consumes these packages. Each zip has a single root directory named after the package, holding `bin/`, `lib/`, `include/`, `share/` and `LICENSES/`. The `bin/` directory bundles the vcpkg runtime DLLs and the VC runtime (`vcruntime140*.dll`). The `LICENSES/` directory collects the license terms of everything redistributed. CA certificates are not bundled. A `<package>.zip.sha256` checksum file is generated next to each zip.
+
+Package names:
+
+- Release: `ruby-<version>-x64-mswin64_140` (e.g. `ruby-3.4.5-x64-mswin64_140`)
+- Snapshot: `ruby-<version>dev-<yyyymmdd>-<commit>-x64-mswin64_140`, so that a dev build can never collide with a release package name
+
+Releases are built from the official release tarball on cache.ruby-lang.org, verified against `pub/ruby/index.txt`. Snapshots are built from a fresh clone of the master branch. Ruby 3.3 has no in-tree `vcpkg.json`, so the builder supplies `tool/mswin/vcpkg-ruby_3_3.json` instead. Packaging is done by `tool/mswin/binary-package.rb`, a vendored copy of the script proposed for ruby/ruby. Once the in-tree `nmake binary-package` target is available on all target branches, the workflows should switch to it.
+
+Every built zip is smoke-tested in the workflow. The zip is extracted, the root name, layout and checksum are checked, and the packaged `ruby.exe` is run with PATH restricted to System32 while loading openssl, fiddle, psych and zlib. The zip and its checksum are uploaded as an Actions artifact. Publishing to cache.ruby-lang.org is not wired up yet.
 
 # How to trigger workflows
 
@@ -53,6 +68,14 @@ All snapshot and draft-release workflows also support `repository_dispatch` and 
 2. Click **Run workflow**
 3. Enter the target version (e.g. `3.4.0-rc1`) in **Target version**
 4. Click **Run workflow**
+
+## Build a mswin release package
+
+1. Open <https://github.com/ruby/actions/actions/workflows/mswin-release.yml>
+2. Click **Run workflow**
+3. Enter the released version (e.g. `3.4.5`) in **Packaging target version**
+4. Click **Run workflow**
+5. Download the zip and `.sha256` from the run's artifacts
 
 ## Remove temporary release packages
 

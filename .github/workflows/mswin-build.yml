@@ -1,0 +1,234 @@
+name: mswin-build
+
+# Build a relocatable binary zip package for Windows (x64-mswin64_140).
+# The zip layout is a public contract for tooling that consumes these
+# packages: a single root directory named after the package, holding
+# bin/, lib/, include/, share/ and LICENSES/.  A .sha256 checksum file
+# is generated next to the zip.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Release version to package (e.g. 3.4.5). Leave empty to build a dev snapshot of the master branch.'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: mswin package ${{ inputs.version || 'master' }}
+    runs-on: windows-2022
+    env:
+      TARGET_VERSION: ${{ inputs.version }}
+      VCPKG_DEFAULT_TRIPLET: x64-windows
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: actions
+
+      - uses: ruby/setup-ruby@afeafc3d1ab54a631816aba4c914a0081c12ff2f # v1.310.0
+        with:
+          ruby-version: '3.2'
+          bundler: none
+          windows-toolchain: none
+
+      - name: Fetch source
+        # A release is built from the official release tarball, verified
+        # against the release index.  A snapshot is built from the master
+        # branch of ruby/ruby.
+        run: |
+          set -ex
+          mkdir build pkg
+          if [ -n "$TARGET_VERSION" ]; then
+            series=$(echo "$TARGET_VERSION" | sed -E 's/^([0-9]+\.[0-9]+)\..*/\1/')
+            curl -fsSLo ruby-src.tar.gz "https://cache.ruby-lang.org/pub/ruby/$series/ruby-$TARGET_VERSION.tar.gz"
+            curl -fsSLo index.txt https://cache.ruby-lang.org/pub/ruby/index.txt
+            ruby -rdigest -e '
+              ver, file = ARGV
+              want = File.foreach("index.txt").filter_map {|line|
+                name, url, _sha1, sha256, = line.chomp.split("\t")
+                sha256 if name == "ruby-#{ver}" and url.end_with?("/ruby-#{ver}.tar.gz")
+              }.first
+              abort "ruby-#{ver}.tar.gz is not in the release index yet. Retry after update_index has run." unless want
+              got = Digest::SHA256.file(file).hexdigest
+              abort "checksum mismatch: expected #{want}, got #{got}" unless got == want
+              puts "tarball checksum OK"
+            ' "$TARGET_VERSION" ruby-src.tar.gz
+            tar xf ruby-src.tar.gz
+            mv "ruby-$TARGET_VERSION" src
+          else
+            git clone --depth=1 https://github.com/ruby/ruby src
+          fi
+        shell: bash
+
+      - name: Prepare vcpkg manifest and configure args
+        # Ruby 3.3 does not ship vcpkg.json.  Use the manifest vendored in
+        # this repository, which mirrors the one on the ruby_3_4 branch.
+        # --with-gmp is passed only when the manifest pulls in gmp.
+        run: |
+          set -ex
+          if [ ! -f src/vcpkg.json ]; then
+            cp actions/tool/mswin/vcpkg-ruby_3_3.json src/vcpkg.json
+          fi
+          opt_dir="${GITHUB_WORKSPACE//\\//}/src/vcpkg_installed/x64-windows"
+          args="--disable-install-doc --with-opt-dir=$opt_dir"
+          if grep -q '"gmp"' src/vcpkg.json; then
+            args="$args --with-gmp"
+          fi
+          echo "CONFIGURE_ARGS=$args" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Install tools with scoop
+        run: |
+          if ((vcpkg.exe help install) -match "manifest") { exit }
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+          iwr -useb get.scoop.sh | iex
+          Join-Path (Resolve-Path ~).Path "scoop\shims" >> $Env:GITHUB_PATH
+          scoop install vcpkg
+        shell: pwsh
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: vcpkg-cache
+        with:
+          path: src\vcpkg_installed
+          key: windows-2022-mswin-vcpkg-${{ hashFiles('src/vcpkg.json') }}
+
+      - name: Install libraries with vcpkg
+        run: |
+          git -C "%VCPKG_INSTALLATION_ROOT%" pull --quiet
+          vcpkg install
+        working-directory: src
+        shell: cmd
+        if: ${{ ! steps.vcpkg-cache.outputs.cache-hit }}
+
+      - name: Set up VS environment
+        # VsDevCmd also sets VCToolsRedistDir, which the packaging script
+        # needs to bundle vcruntime140*.dll.
+        run: |
+          set > old.env
+          for /f "usebackq delims=" %%I in (`vswhere.exe -latest -property installationPath`) do @call "%%I\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+          set TMP=%RUNNER_TEMP%
+          set TEMP=%RUNNER_TEMP%
+          set > new.env
+        shell: cmd
+
+      - name: Update environment
+        run: |
+          $old = (Get-Content old.env); $new = (Get-Content new.env)
+          del *.env
+          Compare-Object $old $new |
+            Where-Object { $_.SideIndicator -eq '=>' } |
+            Select-Object -ExpandProperty InputObject |
+            Add-Content -Path $env:GITHUB_ENV
+        shell: pwsh
+
+      - name: Configure
+        run: ..\src\win32\configure.bat %CONFIGURE_ARGS%
+        working-directory: build
+        shell: cmd
+
+      - name: Link vcpkg DLLs into the build directory
+        run: |
+          for %%I in (%GITHUB_WORKSPACE%\src\vcpkg_installed\x64-windows\bin\*.dll) do (
+            if not %%~nI == readline mklink %%~nxI %%I
+          )
+        working-directory: build
+        shell: cmd
+
+      - name: nmake extract-gems
+        run: nmake extract-gems
+        working-directory: build
+        shell: cmd
+
+      - name: nmake
+        run: nmake
+        working-directory: build
+        shell: cmd
+
+      - name: nmake install-nodoc
+        run: nmake install-nodoc DESTDIR=%GITHUB_WORKSPACE%\stage
+        working-directory: build
+        shell: cmd
+
+      - name: Determine package name
+        # A dev build must never share a name with a release package, so
+        # snapshots embed the commit date and hash.  The staged ruby is
+        # relocatable, and the build directory on PATH provides the vcpkg
+        # DLLs it links against.
+        run: |
+          set -ex
+          ruby_exe=$(find stage -name ruby.exe -path '*bin*')
+          info=$(PATH="$PWD/build:$PATH" "$ruby_exe" -e 'print [RUBY_VERSION, RUBY_PATCHLEVEL, RUBY_PLATFORM].join(" ")')
+          read -r ver patch platform <<< "$info"
+          test "$platform" = x64-mswin64_140
+          if [ -n "$TARGET_VERSION" ]; then
+            pkg_name="ruby-$TARGET_VERSION-$platform"
+          else
+            suffix=""
+            [ "$patch" = "-1" ] && suffix=dev
+            date=$(git -C src log -1 --date=format:%Y%m%d --format=%cd)
+            sha=$(git -C src rev-parse --short=10 HEAD)
+            pkg_name="ruby-$ver$suffix-$date-$sha-$platform"
+          fi
+          echo "PKG_NAME=$pkg_name" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Package
+        run: >-
+          ruby actions\tool\mswin\binary-package.rb --stage=stage
+          --name=%PKG_NAME% --arch=x64 --srcdir=src
+          --vcpkg-dir=src/vcpkg_installed/x64-windows
+          --output=pkg/%PKG_NAME%.zip
+        shell: cmd
+
+      - name: Generate checksum
+        run: sha256sum "$PKG_NAME.zip" > "$PKG_NAME.zip.sha256"
+        working-directory: pkg
+        shell: bash
+
+      - name: Smoke test
+        # Verify the package contract (root directory name, layout and
+        # checksum), then run the packaged ruby with PATH restricted to
+        # System32 to prove the zip is self-contained.
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkg = $env:PKG_NAME
+          $expected = (Get-Content "pkg\$pkg.zip.sha256" -TotalCount 1).Split(' ')[0]
+          $actual = (Get-FileHash "pkg\$pkg.zip" -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) { throw "checksum file does not match the zip: $actual" }
+          New-Item -ItemType Directory smoke | Out-Null
+          tar -x -f "pkg\$pkg.zip" -C smoke
+          $roots = @(Get-ChildItem smoke)
+          if ($roots.Count -ne 1 -or $roots[0].Name -ne $pkg) { throw "unexpected zip root: $($roots.Name -join ', ')" }
+          foreach ($d in 'bin', 'lib', 'include', 'share', 'LICENSES') {
+            if (-not (Test-Path "smoke\$pkg\$d")) { throw "missing directory in package: $d" }
+          }
+          if (-not (Test-Path "smoke\$pkg\bin\vcruntime140.dll")) { throw "vcruntime140.dll is not bundled" }
+          $env:Path = "$env:SystemRoot\System32"
+          $out = & "smoke\$pkg\bin\ruby.exe" -v -ropenssl -rfiddle -rpsych -rzlib -e "puts :ok"
+          $out | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "ruby.exe exited with $LASTEXITCODE" }
+          if ($out -notcontains 'ok') { throw "unexpected smoke test output" }
+        shell: pwsh
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.PKG_NAME }}
+          path: pkg\*
+
+      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: mswin package ${{ inputs.version || 'master' }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()
