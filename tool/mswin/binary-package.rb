@@ -10,6 +10,9 @@
 # with the upstream one manually.  Once the in-tree target is available
 # on all target branches, the workflows should switch to `nmake
 # binary-package` and this file can be removed.
+#
+# Pinned to ruby/ruby commit a7d813d0a5 (branch
+# claude/beautiful-faraday-89cac8).  Update the SHA when re-syncing.
 
 require 'optparse'
 require 'fileutils'
@@ -72,6 +75,22 @@ FileUtils.mkdir_p(File.join(licdir, "ruby"))
 end
 Dir.glob(File.join(vcpkgdir, "share", "*", "copyright")) do |f|
   FileUtils.cp(f, File.join(licdir, "#{File.basename(File.dirname(f))}.txt"))
+end
+
+# Scrub build-machine specific paths from the recorded configure
+# arguments.  mkmf applies $configure_args (notably --with-opt-dir) to
+# every extension build, so a leftover absolute path breaks or taints
+# gem compilation on the destination machine.
+rbconfigs = Dir.glob(File.join(root, "lib/ruby/*/*/rbconfig.rb"))
+abort "#{$0}: rbconfig.rb not found under #{root}" if rbconfigs.empty?
+rbconfigs.each do |file|
+  src = File.binread(file)
+  src.sub!(/^(\s*CONFIG\["configure_args"\]\s*=\s*")(.*)(")/) do
+    pre, args, post = $1, $2, $3
+    kept = args.scan(/\\".*?\\"|\S+/).reject {|t| t.match?(%r{[A-Za-z]:[/\\]})}
+    pre + kept.join(" ") + post
+  end or abort "#{$0}: configure_args not found in #{file}"
+  File.binwrite(file, src)
 end
 
 # Rename the prefix directory to the package name and archive it with

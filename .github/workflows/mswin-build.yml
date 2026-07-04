@@ -193,7 +193,10 @@ jobs:
       - name: Smoke test
         # Verify the package contract (root directory name, layout and
         # checksum), then run the packaged ruby with PATH restricted to
-        # System32 to prove the zip is self-contained.
+        # System32 to prove the zip is self-contained.  Also assert that
+        # rbconfig's configure_args carries no build-machine path: mkmf
+        # feeds it to every extension build, so a leaked absolute path
+        # would break gem compilation on the destination machine.
         run: |
           $ErrorActionPreference = 'Stop'
           $pkg = $env:PKG_NAME
@@ -208,11 +211,35 @@ jobs:
             if (-not (Test-Path "smoke\$pkg\$d")) { throw "missing directory in package: $d" }
           }
           if (-not (Test-Path "smoke\$pkg\bin\vcruntime140.dll")) { throw "vcruntime140.dll is not bundled" }
+          $ruby = "smoke\$pkg\bin\ruby.exe"
           $env:Path = "$env:SystemRoot\System32"
-          $out = & "smoke\$pkg\bin\ruby.exe" -v -ropenssl -rfiddle -rpsych -rzlib -e "puts :ok"
+          $out = & $ruby -v -ropenssl -rfiddle -rpsych -rzlib -e "puts :ok"
           $out | Write-Host
           if ($LASTEXITCODE -ne 0) { throw "ruby.exe exited with $LASTEXITCODE" }
           if ($out -notcontains 'ok') { throw "unexpected smoke test output" }
+          & $ruby -e "abort RbConfig::CONFIG['configure_args'] if RbConfig::CONFIG['configure_args'] =~ /[A-Za-z]:[\/\\]/"
+          if ($LASTEXITCODE -ne 0) { throw "configure_args retains a build-machine absolute path" }
+        shell: pwsh
+
+      - name: Build a C extension gem
+        # Prove that compiling a native gem against the package does not
+        # pull in the build machine's vcpkg path.  The VS toolchain is on
+        # PATH from the earlier VS environment step.
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkg = $env:PKG_NAME
+          $bin = (Resolve-Path "smoke\$pkg\bin").Path
+          $env:Path = "$bin;$env:Path"
+          $env:GEM_HOME = "$PWD\gemhome"
+          $env:GEM_PATH = $env:GEM_HOME
+          & "$bin\gem.cmd" install json --no-document --version 2.20.0
+          if ($LASTEXITCODE -ne 0) { throw "gem install json failed" }
+          $log = Get-ChildItem -Recurse "$env:GEM_HOME\extensions" -Filter gem_make.out |
+            Select-Object -First 1
+          if ($log -and (Select-String -Path $log.FullName -Pattern 'vcpkg' -Quiet)) {
+            throw "vcpkg path leaked into the extension build"
+          }
+          Write-Host "extension build clean"
         shell: pwsh
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
