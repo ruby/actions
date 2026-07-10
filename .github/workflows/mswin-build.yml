@@ -106,8 +106,6 @@ jobs:
         if: ${{ ! steps.vcpkg-cache.outputs.cache-hit }}
 
       - name: Set up VS environment
-        # VsDevCmd also sets VCToolsRedistDir, which the packaging script
-        # needs to bundle vcruntime140*.dll.
         run: |
           set > old.env
           for /f "usebackq delims=" %%I in (`vswhere.exe -latest -products * -property installationPath`) do @call "%%I\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
@@ -180,7 +178,7 @@ jobs:
       - name: Package
         run: >-
           ruby actions\tool\mswin\binary-package.rb --stage=stage
-          --name=%PKG_NAME% --arch=x64 --srcdir=src
+          --name=%PKG_NAME% --srcdir=src
           --vcpkg-dir=src/vcpkg_installed/x64-windows
           --output=pkg/%PKG_NAME%.zip
         shell: cmd
@@ -210,7 +208,7 @@ jobs:
           foreach ($d in 'bin', 'lib', 'include', 'share', 'LICENSES') {
             if (-not (Test-Path "smoke\$pkg\$d")) { throw "missing directory in package: $d" }
           }
-          if (-not (Test-Path "smoke\$pkg\bin\vcruntime140.dll")) { throw "vcruntime140.dll is not bundled" }
+          if (Test-Path "smoke\$pkg\bin\vcruntime140.dll") { throw "vcruntime140.dll must not be bundled" }
           $ruby = "smoke\$pkg\bin\ruby.exe"
           $env:Path = "$env:SystemRoot\System32"
           $out = & $ruby -v -ropenssl -rfiddle -rpsych -rzlib -e "puts :ok"

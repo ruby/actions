@@ -41,7 +41,7 @@ All snapshot and draft-release workflows also support `repository_dispatch` and 
 
 # mswin binary packages
 
-The `mswin-snapshot` and `mswin-release` workflows build relocatable binary zip packages for Windows (x64-mswin64\_140) through the shared `mswin-build` reusable workflow. The zip layout is a public contract for tooling that consumes these packages. Each zip has a single root directory named after the package, holding `bin/`, `lib/`, `include/`, `share/` and `LICENSES/`. The `bin/` directory bundles the vcpkg runtime DLLs and the VC runtime (`vcruntime140*.dll`). The `LICENSES/` directory collects the license terms of everything redistributed. CA certificates are not bundled. A `<package>.zip.sha256` checksum file is generated next to each zip.
+The `mswin-snapshot` and `mswin-release` workflows build relocatable binary zip packages for Windows (x64-mswin64\_140) through the shared `mswin-build` reusable workflow. The zip layout is a public contract for tooling that consumes these packages. Each zip has a single root directory named after the package, holding `bin/`, `lib/`, `include/`, `share/` and `LICENSES/`. The `bin/` directory bundles the vcpkg runtime DLLs. The VC runtime (`vcruntime140*.dll`) is deliberately not bundled, because app-local copies are never serviced by Windows Update. The package assumes the VC++ Redistributable is installed on the destination machine. The `LICENSES/` directory collects the license terms of everything redistributed. CA certificates are not bundled either. A `<package>.zip.sha256` checksum file is generated next to each zip.
 
 Package names:
 
