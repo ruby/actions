@@ -25,6 +25,9 @@ jobs:
     env:
       TARGET_VERSION: ${{ inputs.version }}
       VCPKG_DEFAULT_TRIPLET: x64-windows
+      # Commit in ruby/ruby that tool/binary-package.rb is fetched from.
+      # Bumping this SHA is the whole sync with upstream.
+      BINARY_PACKAGE_REF: f132ecd1d9c9ff21f60737b23e28175946070f90
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -175,9 +178,18 @@ jobs:
           echo "PKG_NAME=$pkg_name" >> "$GITHUB_ENV"
         shell: bash
 
+      - name: Fetch packaging script
+        # tool/binary-package.rb lives in ruby/ruby.  It is applied from
+        # the outside to the staged install rather than via the in-tree
+        # `nmake binary-package` target, so that already-released
+        # tarballs (which predate the script) can be packaged and the
+        # snapshot naming stays under this repository's control.
+        run: curl -fsSLo binary-package.rb "https://raw.githubusercontent.com/ruby/ruby/${BINARY_PACKAGE_REF}/tool/binary-package.rb"
+        shell: bash
+
       - name: Package
         run: >-
-          ruby actions\tool\mswin\binary-package.rb --stage=stage
+          ruby binary-package.rb --stage=stage
           --name=%PKG_NAME% --srcdir=src
           --vcpkg-dir=src/vcpkg_installed/x64-windows
           --output=pkg/%PKG_NAME%.zip
