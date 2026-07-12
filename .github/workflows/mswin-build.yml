@@ -64,7 +64,13 @@ jobs:
             tar xf ruby-src.tar.gz
             mv "ruby-$TARGET_VERSION" src
           else
-            git clone --depth=1 https://github.com/ruby/ruby src
+            # Check out with LF like ruby/ruby's own CI does.  The
+            # runner's git defaults to core.autocrlf=true, and the
+            # prism-based rbinc generation (tool/dump_ast.c plus
+            # tool/mk_builtin_loader.rb) misassociates Primitive.cexpr!
+            # with its enclosing method on CRLF sources, which breaks
+            # the build with C2065 in array.c.
+            git clone -c core.autocrlf=false -c core.eol=lf --depth=1 https://github.com/ruby/ruby src
           fi
         shell: bash
 
