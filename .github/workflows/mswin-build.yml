@@ -91,6 +91,22 @@ jobs:
           echo "CONFIGURE_ARGS=$args" >> "$GITHUB_ENV"
         shell: bash
 
+      - name: Backport -we4013 to the mswin warnflags
+        # ruby/ruby 091c7d4a54 made C4013 (implicit function declaration)
+        # an error on mswin.  Without it, mkmf's have_func probe for a
+        # compiler builtin such as __builtin_clzll compiles on a bare
+        # implicit declaration and reports a false positive, which then
+        # fails to link.  json's parser hits exactly this on Ruby 3.3.
+        # The fix ships in 3.4 and later, so patch only the older trees
+        # that still lack it, mirroring the vcpkg.json override above.
+        run: |
+          set -ex
+          if ! grep -q 'we4013' src/win32/Makefile.sub; then
+            sed -i 's/-we4028 -we4142 -we4047$/-we4028 -we4142 -we4047 -we4013/' src/win32/Makefile.sub
+            grep -q 'we4013' src/win32/Makefile.sub
+          fi
+        shell: bash
+
       - name: Install tools with scoop
         run: |
           if ((vcpkg.exe help install) -match "manifest") { exit }
