@@ -128,8 +128,8 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-macos.yml@master
     with:
       archname: ${{ needs.info.outputs.archname }}
-      # On master the macOS matrix is trimmed to a single smoke check by
-      # default; release verification wants the full fan-out.
+      # The macOS matrix is trimmed to a single smoke check by default;
+      # release verification wants the full fan-out.
       full-matrix: true
       notify-release-channel: true
     secrets: inherit
@@ -162,6 +162,7 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-macos.yml@ruby_4_0
     with:
       archname: ${{ needs.info.outputs.archname }}
+      full-matrix: true
       notify-release-channel: true
     secrets: inherit
   windows-ruby_4_0:
@@ -191,6 +192,7 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-macos.yml@ruby_3_4
     with:
       archname: ${{ needs.info.outputs.archname }}
+      full-matrix: true
       notify-release-channel: true
     secrets: inherit
   windows-ruby_3_4:
@@ -220,6 +222,7 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-macos.yml@ruby_3_3
     with:
       archname: ${{ needs.info.outputs.archname }}
+      full-matrix: true
       notify-release-channel: true
     secrets: inherit
   windows-ruby_3_3:
