@@ -120,10 +120,7 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-ubuntu.yml@master
     with:
       archname: ${{ needs.info.outputs.archname }}
-      allow-failures: power_assert
-      remove-gnupg: true
-      notify-ruby-sha: true
-      branch-label: master
+      notify-release-channel: true
     secrets: inherit
   macos-master:
     needs: [info, tarball]
@@ -131,14 +128,23 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-macos.yml@master
     with:
       archname: ${{ needs.info.outputs.archname }}
-      allow-failures: power_assert
+      # On master the macOS matrix is trimmed to a single smoke check by
+      # default; release verification wants the full fan-out.
+      full-matrix: true
+      notify-release-channel: true
     secrets: inherit
   windows-master:
     needs: [info, tarball]
     if: needs.info.outputs.branch == 'master'
+    # tarball-windows uploads to the vcpkg binary cache (GitHub Packages
+    # nuget feed) outside pull requests, using the caller job's token.
+    permissions:
+      contents: read
+      packages: write
     uses: ruby/ruby/.github/workflows/tarball-windows.yml@master
     with:
       archname: ${{ needs.info.outputs.archname }}
+      notify-release-channel: true
     secrets: inherit
 
   # ruby_4_0
@@ -148,10 +154,7 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-ubuntu.yml@ruby_4_0
     with:
       archname: ${{ needs.info.outputs.archname }}
-      allow-failures: power_assert
-      remove-gnupg: true
-      notify-ruby-sha: true
-      branch-label: ${{ needs.info.outputs.branch }}
+      notify-release-channel: true
     secrets: inherit
   macos-ruby_4_0:
     needs: [info, tarball]
@@ -159,14 +162,18 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-macos.yml@ruby_4_0
     with:
       archname: ${{ needs.info.outputs.archname }}
-      allow-failures: power_assert
+      notify-release-channel: true
     secrets: inherit
   windows-ruby_4_0:
     needs: [info, tarball]
     if: needs.info.outputs.branch == 'ruby_4_0'
+    permissions:
+      contents: read
+      packages: write
     uses: ruby/ruby/.github/workflows/tarball-windows.yml@ruby_4_0
     with:
       archname: ${{ needs.info.outputs.archname }}
+      notify-release-channel: true
     secrets: inherit
 
   # ruby_3_4
@@ -176,9 +183,7 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-ubuntu.yml@ruby_3_4
     with:
       archname: ${{ needs.info.outputs.archname }}
-      apt-mode: git-only
-      notify-ruby-sha: true
-      branch-label: ${{ needs.info.outputs.branch }}
+      notify-release-channel: true
     secrets: inherit
   macos-ruby_3_4:
     needs: [info, tarball]
@@ -186,13 +191,18 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-macos.yml@ruby_3_4
     with:
       archname: ${{ needs.info.outputs.archname }}
+      notify-release-channel: true
     secrets: inherit
   windows-ruby_3_4:
     needs: [info, tarball]
     if: needs.info.outputs.branch == 'ruby_3_4'
+    permissions:
+      contents: read
+      packages: write
     uses: ruby/ruby/.github/workflows/tarball-windows.yml@ruby_3_4
     with:
       archname: ${{ needs.info.outputs.archname }}
+      notify-release-channel: true
     secrets: inherit
 
   # ruby_3_3
@@ -202,10 +212,7 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-ubuntu.yml@ruby_3_3
     with:
       archname: ${{ needs.info.outputs.archname }}
-      apt-mode: ruby-and-git
-      setup-host-ruby: false
-      fixed-dirs-extra: false
-      ruby-bin: ruby
+      notify-release-channel: true
     secrets: inherit
   macos-ruby_3_3:
     needs: [info, tarball]
@@ -213,14 +220,17 @@ jobs:
     uses: ruby/ruby/.github/workflows/tarball-macos.yml@ruby_3_3
     with:
       archname: ${{ needs.info.outputs.archname }}
-      rebuild-homebrew-ruby: true
+      notify-release-channel: true
     secrets: inherit
   windows-ruby_3_3:
     needs: [info, tarball]
     if: needs.info.outputs.branch == 'ruby_3_3'
+    # ruby_3_3's tarball-windows does not use the vcpkg binary cache, so no
+    # packages permission is needed (mirrors ruby/ruby's tarball-test.yml).
     uses: ruby/ruby/.github/workflows/tarball-windows.yml@ruby_3_3
     with:
       archname: ${{ needs.info.outputs.archname }}
+      notify-release-channel: true
     secrets: inherit
 
   release:
