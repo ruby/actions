@@ -1,0 +1,92 @@
+name: sign-package
+description: >-
+  Sign the PE files inside an mswin binary zip via SignPath and verify
+  the signatures.  Takes an unsigned zip and replaces it in place with
+  the signed one, so callers see a plain zip-in/zip-out contract and the
+  signing backend stays swappable.  Which files inside the zip get
+  signed is defined by the artifact configuration on the SignPath side.
+  Must run on a Windows runner (signtool).
+
+inputs:
+  zip:
+    description: Path to the package zip. Replaced in place by the signed zip.
+    required: true
+  package-name:
+    description: Package name, which is also the zip root directory (e.g. ruby-3.4.5-x64-mswin64_140).
+    required: true
+  api-token:
+    description: SignPath REST API token.
+    required: true
+  organization-id:
+    description: SignPath organization ID.
+    required: true
+  project-slug:
+    description: SignPath project slug.
+    required: true
+  signing-policy-slug:
+    description: SignPath signing policy slug.
+    required: true
+  artifact-configuration-slug:
+    description: SignPath artifact configuration slug.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Upload unsigned artifact
+      id: unsigned
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.package-name }}-unsigned
+        path: ${{ inputs.zip }}
+
+    - name: Submit signing request
+      id: signing
+      uses: signpath/github-action-submit-signing-request@b9d91eadd323de506c0c81cf0c7fe7438f3360fd # v2.2
+      with:
+        api-token: ${{ inputs.api-token }}
+        organization-id: ${{ inputs.organization-id }}
+        project-slug: ${{ inputs.project-slug }}
+        signing-policy-slug: ${{ inputs.signing-policy-slug }}
+        artifact-configuration-slug: ${{ inputs.artifact-configuration-slug }}
+        github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+        wait-for-completion: true
+        output-artifact-directory: signed-artifact
+
+    - name: Replace zip with the signed one
+      run: |
+        set -ex
+        mv -f "signed-artifact/$(basename "$ZIP")" "$ZIP"
+        rm -rf signed-artifact
+      env:
+        ZIP: ${{ inputs.zip }}
+      shell: bash
+
+    - name: Verify signatures
+      # Authenticode-verify every PE that the artifact configuration
+      # signs: the interpreter binaries and the bundled extension .so
+      # files.  The vcpkg DLLs are third-party builds and stay unsigned,
+      # so they are deliberately not checked here.
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*\x64\signtool.exe" |
+          Sort-Object FullName | Select-Object -Last 1
+        if (-not $signtool) { throw 'signtool.exe not found' }
+        New-Item -ItemType Directory verify-signed | Out-Null
+        tar -x -f $env:ZIP -C verify-signed
+        $root = "verify-signed\$env:PKG_NAME"
+        $targets = @(Get-Item "$root\bin\ruby.exe", "$root\bin\rubyw.exe") +
+          @(Get-ChildItem "$root\bin\x64-vcruntime140-ruby*.dll") +
+          @(Get-ChildItem -Recurse "$root\lib\ruby" -Filter *.so)
+        if ($targets.Count -lt 3) { throw "unexpectedly few signing targets: $($targets.Count)" }
+        foreach ($f in $targets) {
+          & $signtool.FullName verify /pa /q $f.FullName
+          if ($LASTEXITCODE -ne 0) { throw "not signed: $($f.FullName)" }
+        }
+        Write-Host "verified $($targets.Count) signed files"
+        Remove-Item -Recurse -Force verify-signed
+      env:
+        ZIP: ${{ inputs.zip }}
+        PKG_NAME: ${{ inputs.package-name }}
+      shell: pwsh
