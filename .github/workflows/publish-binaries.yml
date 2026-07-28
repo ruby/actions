@@ -1,0 +1,91 @@
+name: Publish mswin binary package
+
+# Promotes a staged mswin zip from pub/tmp/ to its permanent home under
+# pub/ruby/binaries/mswin64/ and regenerates the binaries index.
+# Dispatched by ruby/ruby's publish workflow alongside the tarball
+# publication, or run by hand.  The destination is append-only: an
+# existing zip is never overwritten, a fixed package is reissued under a
+# new revisioned name instead.
+
+on:
+  repository_dispatch:
+    types:
+      - publish-binaries
+  workflow_dispatch:
+    inputs:
+      TARGET_VERSION:
+        description: Released version whose staged zip should be published (e.g. 3.4.5)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION || github.event.client_payload.version }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-west-2
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q || :
+          sudo apt-get install --no-install-recommends -y ruby bundler
+
+      - name: Checkout ${{ github.repository }}
+        run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
+
+      - name: Verify staged package
+        run: |
+          set -ex
+          pkg="ruby-${TARGET_VERSION}-x64-mswin64_140"
+          echo "PKG_NAME=$pkg" >> "$GITHUB_ENV"
+          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${pkg}-draft.zip" "${pkg}.zip" --no-progress
+          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${pkg}-draft.zip.sha256" "${pkg}.zip.sha256" --no-progress
+          sha256sum -c "${pkg}.zip.sha256"
+
+      - name: Copy to pub/ruby/binaries
+        # aws s3 cp between S3 URLs is a server-side copy that carries
+        # the object metadata (the signed flag) along.
+        run: |
+          set -ex
+          dest="pub/ruby/binaries/mswin64/${PKG_NAME}.zip"
+          if aws s3api head-object --bucket ftp.r-l.o --key "$dest" >/dev/null 2>&1; then
+            echo "::error::s3://ftp.r-l.o/$dest already exists; refusing to overwrite a published package"
+            exit 1
+          fi
+          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${PKG_NAME}-draft.zip" "s3://ftp.r-l.o/$dest" --no-progress
+          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${PKG_NAME}-draft.zip.sha256" "s3://ftp.r-l.o/$dest.sha256" --no-progress
+          for f in "$dest" "$dest.sha256"; do
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$f"
+          done
+
+      - name: Update binaries index
+        run: ruby tool/update_binaries_index.rb
+
+      - name: Remove staged package
+        run: |
+          set -ex
+          for ext in .zip .zip.sha256; do
+            aws s3 rm "s3://ftp.r-l.o/pub/tmp/${PKG_NAME}-draft$ext"
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/${PKG_NAME}-draft$ext"
+          done
+          curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/"
+
+      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "title": "Publish mswin package ${{ env.TARGET_VERSION }}",
+                "title_link": "https://cache.ruby-lang.org/pub/ruby/binaries/mswin64/",
+                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "${{ job.status == 'success' && 'good' || 'danger' }}"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: always()
