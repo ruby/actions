@@ -14,6 +14,15 @@ on:
         type: string
         required: false
         default: ''
+      tarball-artifact:
+        description: 'Name of a workflow artifact holding ruby-<version>.tar.gz to build from, e.g. the Packages artifact of a draft release. The tarball comes from the same run, so the release-index checksum verification is skipped.'
+        type: string
+        required: false
+        default: ''
+    outputs:
+      pkg-name:
+        description: 'Name of the built package (zip root directory).'
+        value: ${{ jobs.build.outputs.pkg-name }}
 
 permissions:
   contents: read
@@ -22,6 +31,8 @@ jobs:
   build:
     name: mswin package ${{ inputs.version || 'master' }}
     runs-on: windows-2022
+    outputs:
+      pkg-name: ${{ steps.pkg.outputs.pkg_name }}
     env:
       TARGET_VERSION: ${{ inputs.version }}
       VCPKG_DEFAULT_TRIPLET: x64-windows
@@ -39,14 +50,27 @@ jobs:
           bundler: none
           windows-toolchain: none
 
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: inputs.tarball-artifact != ''
+        with:
+          name: ${{ inputs.tarball-artifact }}
+          path: tarball
+
       - name: Fetch source
         # A release is built from the official release tarball, verified
-        # against the release index.  A snapshot is built from the master
-        # branch of ruby/ruby.
+        # against the release index.  A draft release passes its freshly
+        # built tarball as a workflow artifact instead, since it is not
+        # in the index yet.  A snapshot is built from the master branch
+        # of ruby/ruby.
+        env:
+          TARBALL_ARTIFACT: ${{ inputs.tarball-artifact }}
         run: |
           set -ex
           mkdir build pkg
-          if [ -n "$TARGET_VERSION" ]; then
+          if [ -n "$TARBALL_ARTIFACT" ]; then
+            tar xf "tarball/ruby-$TARGET_VERSION.tar.gz"
+            mv "ruby-$TARGET_VERSION" src
+          elif [ -n "$TARGET_VERSION" ]; then
             series=$(echo "$TARGET_VERSION" | sed -E 's/^([0-9]+\.[0-9]+)\..*/\1/')
             curl -fsSLo ruby-src.tar.gz "https://cache.ruby-lang.org/pub/ruby/$series/ruby-$TARGET_VERSION.tar.gz"
             curl -fsSLo index.txt https://cache.ruby-lang.org/pub/ruby/index.txt
@@ -178,6 +202,7 @@ jobs:
         shell: cmd
 
       - name: Determine package name
+        id: pkg
         # A dev build must never share a name with a release package, so
         # snapshots embed the commit date and hash.  The staged ruby is
         # relocatable, and the build directory on PATH provides the vcpkg
@@ -198,6 +223,7 @@ jobs:
             pkg_name="ruby-$ver$suffix-$date-$sha-$platform"
           fi
           echo "PKG_NAME=$pkg_name" >> "$GITHUB_ENV"
+          echo "pkg_name=$pkg_name" >> "$GITHUB_OUTPUT"
         shell: bash
 
       - name: Fetch packaging script

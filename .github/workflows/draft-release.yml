@@ -236,6 +236,106 @@ jobs:
       notify-release-channel: true
     secrets: inherit
 
+  # mswin binary package: built from the same draft tarball, signed via
+  # SignPath and staged next to the tarballs in pub/tmp/.  Deliberately
+  # absent from the release job's needs, so a packaging or signing
+  # failure never holds back the source release.
+  mswin-package:
+    needs: [info, tarball]
+    uses: ./.github/workflows/mswin-build.yml
+    with:
+      version: ${{ needs.info.outputs.target_version }}
+      tarball-artifact: Packages
+    secrets: inherit
+
+  mswin-stage:
+    needs: [info, mswin-package]
+    runs-on: windows-2022
+    # Deployment protection on the signing environment provides the
+    # manual approval gate and confines the SignPath credentials.
+    environment: signing
+    permissions:
+      contents: read
+      # The SignPath connector fetches the unsigned artifact through the
+      # GitHub API.
+      actions: read
+    env:
+      PKG_NAME: ${{ needs.mswin-package.outputs.pkg-name }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.mswin-package.outputs.pkg-name }}
+          path: pkg
+
+      - name: Sign package
+        # Skipped until the SignPath project is provisioned.  The zip is
+        # then staged unsigned and the binaries index records
+        # signed=false for it.
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: ./.github/actions/sign-package
+        with:
+          zip: pkg/${{ env.PKG_NAME }}.zip
+          package-name: ${{ env.PKG_NAME }}
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+
+      - name: Refresh checksum
+        # Signing rewrites the zip, so the checksum shipped next to it
+        # must be regenerated afterwards.
+        run: sha256sum "$PKG_NAME.zip" > "$PKG_NAME.zip.sha256"
+        working-directory: pkg
+        shell: bash
+
+      - name: Smoke test
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkg = $env:PKG_NAME
+          New-Item -ItemType Directory smoke | Out-Null
+          tar -x -f "pkg\$pkg.zip" -C smoke
+          $env:Path = "$env:SystemRoot\System32"
+          $out = & "smoke\$pkg\bin\ruby.exe" -v -ropenssl -e "puts :ok"
+          $out | Write-Host
+          if ($LASTEXITCODE -ne 0 -or $out -notcontains 'ok') { throw 'smoke test failed' }
+        shell: pwsh
+
+      - name: Upload s3
+        run: |
+          set -ex
+          signed=false
+          [ -n "$SIGNPATH_ORGANIZATION_ID" ] && signed=true
+          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/pub/tmp/$PKG_NAME-draft.zip" --no-progress --metadata signed=$signed
+          aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/pub/tmp/$PKG_NAME-draft.zip.sha256" --no-progress
+          for f in "$PKG_NAME-draft.zip" "$PKG_NAME-draft.zip.sha256"; do
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/$f"
+          done
+          curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/"
+        env:
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+        shell: bash
+
+      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "title": "Stage mswin package ${{ needs.info.outputs.target_version }}",
+                "title_link": "https://cache.ruby-lang.org/pub/tmp/",
+                "text": "${{ job.status }}: mswin-stage <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ needs.info.outputs.target_version }}>",
+                "color": "${{ job.status == 'success' && 'good' || 'danger' }}"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: always()
+
   release:
     needs:
       - info
