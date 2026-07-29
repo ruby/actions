@@ -54,20 +54,32 @@ jobs:
           aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/$dev/$PKG_NAME.zip.sha256" --no-progress
 
       - name: Prune old dev builds
-        # Keep the newest 30 dev builds, ordered by the date embedded in
-        # the name (ruby-<version>-<yyyymmdd>-<sha>-...).  Sorting the
-        # whole name would order lexically by version, which breaks once
-        # 4.9 and 4.10 coexist.
+        # Keep the newest 30 dev builds.  Listing goes through
+        # list-objects-v2 rather than `aws s3 ls`, whose human-readable
+        # columns misparse any name containing a space, and only names
+        # matching the dev contract are candidates, so an object that
+        # does not belong here is never silently deleted.  Ordering is by
+        # the date embedded in the name: sorting the whole name orders
+        # lexically by version and breaks once 4.9 and 4.10 coexist.
         run: |
           set -ex
           dev=pub/ruby/binaries/mswin64/dev
-          aws s3 ls "s3://ftp.r-l.o/$dev/" | awk '{print $NF}' | grep -E '\.zip$' | sort -t- -k3,3n -k4,4 | head -n -30 |
+          aws s3api list-objects-v2 --bucket ftp.r-l.o --prefix "$dev/" \
+            --query 'Contents[].Key' --output text > keys.txt
+          tr '\t' '\n' < keys.txt | sed -n "s#^$dev/##p" |
+            grep -E '^ruby-[0-9]+\.[0-9]+\.[0-9]+dev-[0-9]{8}-[0-9a-f]{10}-x64-mswin64_140\.zip$' |
+            sort -t- -k3,3n -k4,4 | head -n -30 > prune.txt || :
+          if [ ! -s prune.txt ]; then
+            echo "nothing to prune"
+            exit 0
+          fi
+          { echo "## Pruned dev builds"; sed 's/^/- /' prune.txt; } >> "$GITHUB_STEP_SUMMARY"
           while read -r zip; do
             aws s3 rm "s3://ftp.r-l.o/$dev/$zip"
             aws s3 rm "s3://ftp.r-l.o/$dev/$zip.sha256"
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$dev/$zip"
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$dev/$zip.sha256"
-          done
+          done < prune.txt
           curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$dev/"
 
       - name: Update binaries index
