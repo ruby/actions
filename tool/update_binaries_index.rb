@@ -22,10 +22,21 @@
 # first publication of a version is revision 0, so it keeps a name to
 # resolve by once a reissue takes the plain tags away from it.
 #
-# The "version" field is the upstream version string, so its syntax
-# depends on the channel: "4.0.5" for a release, "4.1.0-rc1" for a
-# prerelease, "4.1.0dev" for a dev build.  Consumers should resolve
-# through "tags" rather than parsing it.
+# Every entry carries the same keys, using null where a key does not
+# apply, so consumers never have to test for a key's presence:
+#
+#   name          zip root directory, which is also the basename
+#   version       upstream version string.  Its syntax depends on the
+#                 channel ("4.0.5", "4.1.0-rc1", "4.1.0dev"), so resolve
+#                 through "tags" rather than parsing it
+#   channel       release | prerelease | dev
+#   revision      reissue number for release and prerelease, null for dev
+#   tags          resolution tags, see above
+#   platform, url, sha256, size
+#   commit        abbreviated commit for dev, null otherwise
+#   commit_date   date that commit was authored, null outside dev
+#   published_at  date the object was uploaded to the bucket
+#   signed        whether the PE files carry an Authenticode signature
 #
 # Checksums are read from the .zip.sha256 files uploaded next to each
 # zip; the zips themselves are never downloaded.  The "signed" flag is
@@ -48,8 +59,8 @@ INDEX_KEY = 'pub/ruby/binaries/index.json'
 PLATFORM = 'x64-mswin64_140'
 
 Build = Struct.new(
-  :version, :channel, :revision, :tags, :platform, :url, :sha256, :size,
-  :date, :commit, :signed, keyword_init: true
+  :name, :version, :channel, :revision, :tags, :platform, :url, :sha256,
+  :size, :commit, :commit_date, :published_at, :signed, keyword_init: true
 )
 
 def sha256_for(bucket, key)
@@ -71,10 +82,12 @@ def scan_builds(bucket)
     next unless obj.key.end_with?('.zip')
     basename = File.basename(obj.key)
     common = {
+      name: basename.delete_suffix('.zip'),
       platform: PLATFORM,
       url: "https://cache.ruby-lang.org/#{obj.key}",
       sha256: sha256_for(bucket, obj.key),
       size: obj.size,
+      published_at: obj.last_modified.utc.strftime('%Y-%m-%d'),
       signed: signed?(bucket, obj.key),
     }
     if obj.key.start_with?("#{PREFIX}dev/")
@@ -84,13 +97,14 @@ def scan_builds(bucket)
       builds << Build.new(
         version: m[:ver],
         channel: 'dev',
+        revision: nil,
         tags: [
           "#{series}-dev",
           "#{series}-dev-#{m[:date]}",
           "#{m[:ver]}-#{m[:date]}-#{m[:commit]}",
         ],
-        date: m[:date].gsub(/\A(\d{4})(\d{2})(\d{2})\z/, '\1-\2-\3'),
         commit: m[:commit],
+        commit_date: m[:date].gsub(/\A(\d{4})(\d{2})(\d{2})\z/, '\1-\2-\3'),
         **common,
       )
     else
@@ -103,8 +117,8 @@ def scan_builds(bucket)
         channel: m[:ver].include?('-') ? 'prerelease' : 'release',
         revision: m[:rev]&.to_i || 0,
         tags: [], # assigned by tag_releases once all revisions are known
-        date: obj.last_modified.utc.strftime('%Y-%m-%d'),
         commit: nil,
+        commit_date: nil,
         **common,
       )
     end
@@ -153,7 +167,7 @@ def sort_builds(builds)
       Gem::Version.new(b.version.sub(/dev\z/, '').sub(/-.*\z/, '')),
       CHANNEL_RANK.fetch(b.channel),
       b.revision || 0, # dev builds carry no revision
-      b.date,
+      b.commit_date || b.published_at,
       b.commit || '',
     ]
   end.reverse
@@ -163,10 +177,12 @@ def create_index(bucket)
   builds = scan_builds(bucket)
   tag_releases(builds)
   tag_ruby_dev(builds)
+  # to_h, not to_h.compact: every entry carries every key, so a consumer
+  # never has to distinguish "absent" from "not applicable".
   index = {
     schema: 1,
     next: nil,
-    builds: sort_builds(builds).map { |b| b.to_h.compact },
+    builds: sort_builds(builds).map(&:to_h),
   }
   File.write('index.json', JSON.pretty_generate(index) + "\n")
 end
