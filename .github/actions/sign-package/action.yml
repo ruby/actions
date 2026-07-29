@@ -30,6 +30,15 @@ inputs:
     description: SignPath artifact configuration slug.
     required: false
     default: ''
+  certificate-thumbprint:
+    description: >-
+      SHA-1 thumbprint of the expected signing certificate. When set,
+      verification requires every signature to come from that exact
+      certificate. Leave empty to accept any chain the default
+      Authenticode policy trusts, which does not distinguish our
+      certificate from any other trusted one.
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -70,23 +79,36 @@ runs:
       # so they are deliberately not checked here.
       run: |
         $ErrorActionPreference = 'Stop'
-        $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*\x64\signtool.exe" |
+        $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*\x64\signtool.exe" -ErrorAction SilentlyContinue |
           Sort-Object FullName | Select-Object -Last 1
-        if (-not $signtool) { throw 'signtool.exe not found' }
+        if (-not $signtool) { throw 'signtool.exe not found under Windows Kits\10\bin; check the runner image' }
         New-Item -ItemType Directory verify-signed | Out-Null
-        tar -x -f $env:ZIP -C verify-signed
+        tar -x -f "$env:ZIP" -C verify-signed
         $root = "verify-signed\$env:PKG_NAME"
         $targets = @(Get-Item "$root\bin\ruby.exe", "$root\bin\rubyw.exe") +
           @(Get-ChildItem "$root\bin\x64-vcruntime140-ruby*.dll") +
           @(Get-ChildItem -Recurse "$root\lib\ruby" -Filter *.so)
         if ($targets.Count -lt 3) { throw "unexpectedly few signing targets: $($targets.Count)" }
+        # /tw fails a signature that carries no RFC 3161 timestamp, which
+        # SIGNING.md promises.  /sha1 pins the signing certificate when a
+        # thumbprint is configured; without it the default policy accepts
+        # any trusted chain, not specifically ours.
+        $flags = @('/pa', '/tw')
+        if ($env:THUMBPRINT) { $flags += @('/sha1', $env:THUMBPRINT) }
         foreach ($f in $targets) {
-          & $signtool.FullName verify /pa /q $f.FullName
-          if ($LASTEXITCODE -ne 0) { throw "not signed: $($f.FullName)" }
+          & $signtool.FullName verify @flags /q $f.FullName
+          if ($LASTEXITCODE -ne 0) {
+            # /q suppressed the reason, so re-run verbose to record
+            # whether the signature is missing, the chain is untrusted,
+            # the timestamp is absent or the certificate is not ours.
+            & $signtool.FullName verify @flags /v $f.FullName
+            throw "signature verification failed: $($f.FullName)"
+          }
         }
         Write-Host "verified $($targets.Count) signed files"
         Remove-Item -Recurse -Force verify-signed
       env:
         ZIP: ${{ inputs.zip }}
         PKG_NAME: ${{ inputs.package-name }}
+        THUMBPRINT: ${{ inputs.certificate-thumbprint }}
       shell: pwsh
