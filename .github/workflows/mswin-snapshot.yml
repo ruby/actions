@@ -54,12 +54,14 @@ jobs:
           aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/$dev/$PKG_NAME.zip.sha256" --no-progress
 
       - name: Prune old dev builds
-        # Keep the newest 30 dev builds.  The names sort by version and
-        # date, which matches build order.
+        # Keep the newest 30 dev builds, ordered by the date embedded in
+        # the name (ruby-<version>-<yyyymmdd>-<sha>-...).  Sorting the
+        # whole name would order lexically by version, which breaks once
+        # 4.9 and 4.10 coexist.
         run: |
           set -ex
           dev=pub/ruby/binaries/mswin64/dev
-          aws s3 ls "s3://ftp.r-l.o/$dev/" | awk '{print $NF}' | grep -E '\.zip$' | sort | head -n -30 |
+          aws s3 ls "s3://ftp.r-l.o/$dev/" | awk '{print $NF}' | grep -E '\.zip$' | sort -t- -k3,3n -k4,4 | head -n -30 |
           while read -r zip; do
             aws s3 rm "s3://ftp.r-l.o/$dev/$zip"
             aws s3 rm "s3://ftp.r-l.o/$dev/$zip.sha256"
