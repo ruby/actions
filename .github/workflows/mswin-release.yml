@@ -67,6 +67,11 @@ jobs:
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
           artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
 
+      - name: Warn that the package is unsigned
+        if: vars.SIGNPATH_ORGANIZATION_ID == ''
+        run: echo "::warning::SignPath is not configured, publishing $PKG_NAME UNSIGNED. See the Required setup section of the README."
+        shell: bash
+
       - name: Refresh checksum
         # Signing rewrites the zip, so the checksum shipped next to it
         # must be regenerated afterwards.

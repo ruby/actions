@@ -215,6 +215,14 @@ jobs:
         # DLLs it links against.
         run: |
           set -ex
+          # A malformed revision would either be parsed as a prerelease
+          # suffix or match nothing at all in the binaries index, and the
+          # published bucket is append-only, so reject it before the name
+          # reaches S3.
+          case "$REVISION" in
+            '' | [1-9] | [1-9][0-9]) ;;
+            *) echo "::error::revision must be a positive integer without leading zeros, got: $REVISION"; exit 1 ;;
+          esac
           ruby_exe=$(find stage -name ruby.exe -path '*bin*')
           info=$(PATH="$PWD/build:$PATH" "$ruby_exe" -e 'print [RUBY_VERSION, RUBY_PATCHLEVEL, RUBY_PLATFORM].join(" ")')
           read -r ver patch platform <<< "$info"
@@ -225,7 +233,15 @@ jobs:
             suffix=""
             [ "$patch" = "-1" ] && suffix=dev
             date=$(git -C src log -1 --date=format:%Y%m%d --format=%cd)
+            # --short=<n> is a lower bound: git lengthens the prefix when
+            # it is ambiguous.  The binaries index matches exactly ten
+            # hex digits, so a longer one has to fail here rather than
+            # after the package is uploaded.
             sha=$(git -C src rev-parse --short=10 HEAD)
+            case "$sha" in
+              [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+              *) echo "::error::abbreviated commit is not ten hex digits: $sha"; exit 1 ;;
+            esac
             pkg_name="ruby-$ver$suffix-$date-$sha-$platform"
           fi
           echo "PKG_NAME=$pkg_name" >> "$GITHUB_ENV"
