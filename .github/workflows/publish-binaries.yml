@@ -1,11 +1,16 @@
 name: Publish mswin binary package
 
-# Promotes a staged mswin zip from pub/tmp/ to its permanent home under
-# pub/ruby/binaries/mswin64/ and regenerates the binaries index.
-# Dispatched by ruby/ruby's publish workflow alongside the tarball
-# publication, or run by hand.  The destination is append-only: an
-# existing zip is never overwritten, a fixed package is reissued under a
-# new revisioned name instead.
+# Signs the mswin zip staged by draft-release and promotes it from
+# pub/tmp/ to its permanent home under pub/ruby/binaries/mswin64/, then
+# regenerates the binaries index.  Dispatched by ruby/ruby's publish
+# workflow alongside the tarball publication, or run by hand.
+#
+# Signing happens here rather than at draft time because a draft tag is
+# re-cut freely; signing once, at the moment a release actually becomes
+# public, means one signing request and one approval per release.
+#
+# The destination is append-only: an existing zip is never overwritten,
+# a fixed package is reissued under a new revisioned name instead.
 
 on:
   repository_dispatch:
@@ -22,9 +27,147 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'ruby/actions' }}
+    runs-on: windows-2022
+    # Deployment protection on the signing environment provides the
+    # manual approval gate and confines the SignPath credentials.
+    environment: signing
+    permissions:
+      contents: read
+      # The SignPath connector fetches the unsigned artifact through the
+      # GitHub API.
+      actions: read
+    outputs:
+      pkg-name: ${{ steps.staged.outputs.pkg_name }}
     env:
       TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION || github.event.client_payload.version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Fetch staged package
+        id: staged
+        # The staged zip is what draft-release built from the release
+        # tarball.  Verify it against the checksum the build produced
+        # before handing it to the signing service.
+        run: |
+          set -ex
+          case "$TARGET_VERSION" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::TARGET_VERSION is not a release version: $TARGET_VERSION"; exit 1 ;;
+          esac
+          pkg="ruby-${TARGET_VERSION}-x64-mswin64_140"
+          if ! aws s3api head-object --bucket ftp.r-l.o --key "pub/tmp/${pkg}-draft.zip" >/dev/null 2>&1; then
+            echo "::error::no staged zip at pub/tmp/${pkg}-draft.zip. Check that draft-release's mswin-stage job succeeded for ${TARGET_VERSION}."
+            exit 1
+          fi
+          mkdir pkg
+          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${pkg}-draft.zip" "pkg/${pkg}.zip" --no-progress
+          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${pkg}-draft.zip.sha256" "pkg/${pkg}.zip.sha256" --no-progress
+          (cd pkg && sha256sum -c "${pkg}.zip.sha256")
+          echo "PKG_NAME=$pkg" >> "$GITHUB_ENV"
+          echo "pkg_name=$pkg" >> "$GITHUB_OUTPUT"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+        shell: bash
+
+      - name: Sign package
+        # Skipped until the SignPath project is provisioned.  The zip is
+        # then published unsigned and the binaries index records
+        # signed=false for it.
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: ./.github/actions/sign-package
+        with:
+          zip: pkg/${{ env.PKG_NAME }}.zip
+          package-name: ${{ env.PKG_NAME }}
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+
+      - name: Warn that the package is unsigned
+        if: vars.SIGNPATH_ORGANIZATION_ID == ''
+        run: echo "::warning::SignPath is not configured, publishing $PKG_NAME UNSIGNED. See the Required setup section of the README."
+        shell: bash
+
+      - name: Refresh checksum
+        # Signing rewrites the zip, so the checksum shipped next to it
+        # must be regenerated afterwards.
+        run: sha256sum "$PKG_NAME.zip" > "$PKG_NAME.zip.sha256"
+        working-directory: pkg
+        shell: bash
+
+      - name: Smoke test
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkg = $env:PKG_NAME
+          New-Item -ItemType Directory smoke | Out-Null
+          tar -x -f "pkg\$pkg.zip" -C smoke
+          $roots = @(Get-ChildItem smoke)
+          if ($roots.Count -ne 1 -or $roots[0].Name -ne $pkg) { throw "unexpected zip root: $($roots.Name -join ', ')" }
+          foreach ($d in 'bin', 'lib', 'include', 'share', 'LICENSES') {
+            if (-not (Test-Path "smoke\$pkg\$d")) { throw "missing directory in package: $d" }
+          }
+          $env:Path = "$env:SystemRoot\System32"
+          $out = & "smoke\$pkg\bin\ruby.exe" -v -ropenssl -rfiddle -rpsych -rzlib -e "puts :ok"
+          $out | Write-Host
+          if ($LASTEXITCODE -ne 0 -or $out -notcontains 'ok') { throw 'smoke test failed' }
+        shell: pwsh
+
+      - name: Upload s3
+        run: |
+          set -ex
+          signed=false
+          if [ -n "$SIGNPATH_ORGANIZATION_ID" ]; then signed=true; fi
+          dest="pub/ruby/binaries/mswin64/$PKG_NAME.zip"
+          if aws s3api head-object --bucket ftp.r-l.o --key "$dest" >/dev/null 2>&1; then
+            echo "::error::s3://ftp.r-l.o/$dest already exists; refusing to overwrite a published package. Reissue under a revision with mswin-release instead."
+            exit 1
+          fi
+          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/$dest" --no-progress --metadata signed=$signed
+          aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/$dest.sha256" --no-progress
+          for f in "$dest" "$dest.sha256"; do
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$f"
+          done
+          {
+            echo "## mswin package published"
+            echo "- name: \`$PKG_NAME\`"
+            echo "- signed: $signed"
+            echo "- sha256: \`$(cut -d' ' -f1 "pkg/$PKG_NAME.zip.sha256")\`"
+            echo "- url: https://cache.ruby-lang.org/$dest"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+        shell: bash
+
+      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "title": "Publish mswin package ${{ env.TARGET_VERSION }}",
+                "title_link": "https://cache.ruby-lang.org/pub/ruby/binaries/mswin64/",
+                "text": "${{ job.status }}: publish-binaries <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ env.TARGET_VERSION }}>",
+                "color": "${{ job.status == 'success' && 'good' || 'danger' }}"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: always()
+
+  # Index regeneration and staging cleanup are a separate job so that a
+  # transient failure here can be re-run without tripping the
+  # append-only guard in publish.
+  index:
+    needs: publish
+    runs-on: ubuntu-latest
+    env:
+      PKG_NAME: ${{ needs.publish.outputs.pkg-name }}
       AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: us-west-2
@@ -37,31 +180,6 @@ jobs:
 
       - name: Checkout ${{ github.repository }}
         run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
-
-      - name: Verify staged package
-        run: |
-          set -ex
-          pkg="ruby-${TARGET_VERSION}-x64-mswin64_140"
-          echo "PKG_NAME=$pkg" >> "$GITHUB_ENV"
-          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${pkg}-draft.zip" "${pkg}.zip" --no-progress
-          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${pkg}-draft.zip.sha256" "${pkg}.zip.sha256" --no-progress
-          sha256sum -c "${pkg}.zip.sha256"
-
-      - name: Copy to pub/ruby/binaries
-        # aws s3 cp between S3 URLs is a server-side copy that carries
-        # the object metadata (the signed flag) along.
-        run: |
-          set -ex
-          dest="pub/ruby/binaries/mswin64/${PKG_NAME}.zip"
-          if aws s3api head-object --bucket ftp.r-l.o --key "$dest" >/dev/null 2>&1; then
-            echo "::error::s3://ftp.r-l.o/$dest already exists; refusing to overwrite a published package"
-            exit 1
-          fi
-          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${PKG_NAME}-draft.zip" "s3://ftp.r-l.o/$dest" --no-progress
-          aws s3 cp "s3://ftp.r-l.o/pub/tmp/${PKG_NAME}-draft.zip.sha256" "s3://ftp.r-l.o/$dest.sha256" --no-progress
-          for f in "$dest" "$dest.sha256"; do
-            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$f"
-          done
 
       - name: Update binaries index
         run: ruby tool/update_binaries_index.rb
@@ -80,12 +198,10 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "title": "Publish mswin package ${{ env.TARGET_VERSION }}",
-                "title_link": "https://cache.ruby-lang.org/pub/ruby/binaries/mswin64/",
-                "text": "${{ job.status }}: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
-                "color": "${{ job.status == 'success' && 'good' || 'danger' }}"
+                "text": "${{ job.status }}: binaries index update <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
               }]
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
-        if: always()
+        if: failure()

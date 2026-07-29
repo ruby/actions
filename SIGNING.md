@@ -2,7 +2,7 @@
 
 Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
-The Windows binary packages (`ruby-<version>-x64-mswin64_140.zip`) published under `https://cache.ruby-lang.org/pub/ruby/binaries/mswin64/` are built on GitHub Actions in this repository and signed through SignPath. Signing requests run under the `signing` deployment environment with manual approval, and every signature carries an RFC 3161 timestamp. `index.json` in `pub/ruby/binaries/` records for each build whether it is signed.
+The Windows binary packages (`ruby-<version>-x64-mswin64_140.zip`) published under `https://cache.ruby-lang.org/pub/ruby/binaries/mswin64/` are built on GitHub Actions in this repository and signed through SignPath when the release is published. Signing requests run under the `signing` deployment environment, which is configured with manual approval. Every signature carries an RFC 3161 timestamp. `index.json` in `pub/ruby/binaries/` records for each build whether it is signed.
 
 ## What is signed
 
