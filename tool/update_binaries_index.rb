@@ -18,7 +18,14 @@
 # A reissued package (ruby-4.0.5-1-x64-mswin64_140.zip) supersedes the
 # previous revision: only the highest revision of a version carries the
 # resolution tags, while older revisions stay listed (the bucket is
-# append-only) but resolve solely by their revisioned exact name.
+# append-only) but resolve solely by their revisioned exact name.  The
+# first publication of a version is revision 0, so it keeps a name to
+# resolve by once a reissue takes the plain tags away from it.
+#
+# The "version" field is the upstream version string, so its syntax
+# depends on the channel: "4.0.5" for a release, "4.1.0-rc1" for a
+# prerelease, "4.1.0dev" for a dev build.  Consumers should resolve
+# through "tags" rather than parsing it.
 #
 # Checksums are read from the .zip.sha256 files uploaded next to each
 # zip; the zips themselves are never downloaded.  The "signed" flag is
@@ -94,7 +101,7 @@ def scan_builds(bucket)
       builds << Build.new(
         version: m[:ver],
         channel: m[:ver].include?('-') ? 'prerelease' : 'release',
-        revision: m[:rev]&.to_i,
+        revision: m[:rev]&.to_i || 0,
         tags: [], # assigned by tag_releases once all revisions are known
         date: obj.last_modified.utc.strftime('%Y-%m-%d'),
         commit: nil,
@@ -107,12 +114,14 @@ end
 
 def tag_releases(builds)
   builds.reject { |b| b.channel == 'dev' }.group_by(&:version).each_value do |revisions|
-    winner = revisions.max_by { |b| b.revision || 0 }
+    winner = revisions.max_by(&:revision)
     revisions.each do |b|
-      b.tags << "#{b.version}-#{b.revision}" if b.revision
+      # A superseded revision keeps only its revisioned exact name, so
+      # it stays reachable after the plain tags move to the reissue.
+      b.tags << "#{b.version}-#{b.revision}" if revisions.size > 1
       next unless b.equal?(winner)
       b.tags << b.version
-      unless b.version.include?('-') # preview/rc resolve by exact match only
+      unless b.channel == 'prerelease' # preview/rc resolve by exact match only
         series = b.version[/\A\d+\.\d+/]
         b.tags << series << series[/\A\d+/]
       end
@@ -130,13 +139,23 @@ def tag_ruby_dev(builds)
   end
 end
 
+CHANNEL_RANK = { 'release' => 2, 'dev' => 1, 'prerelease' => 0 }.freeze
+
 def sort_builds(builds)
   # Version-first, so a backfilled old release cannot shadow a newer one
-  # for consumers that pick the first tag match.  The upload date only
-  # breaks ties between dev builds of the same version.  Normalize
-  # "4.1.0dev" and "3.4.0-rc1" into Gem::Version syntax for comparison.
+  # for consumers that pick the first entry.  Within one version the
+  # channel rank decides: Gem::Version would order the string segments
+  # of "4.1.0.dev" and "4.1.0.preview1" alphabetically and sink today's
+  # snapshot below a months-old preview.  The commit breaks ties between
+  # two dev builds of the same day so the order stays total.
   builds.sort_by do |b|
-    [Gem::Version.new(b.version.sub(/dev\z/, '.dev').tr('-', '.')), b.revision || 0, b.date]
+    [
+      Gem::Version.new(b.version.sub(/dev\z/, '').sub(/-.*\z/, '')),
+      CHANNEL_RANK.fetch(b.channel),
+      b.revision || 0, # dev builds carry no revision
+      b.date,
+      b.commit || '',
+    ]
   end.reverse
 end
 
