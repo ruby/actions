@@ -19,6 +19,11 @@ on:
         type: string
         required: false
         default: ''
+      revision:
+        description: 'Reissue revision appended to the release package name (e.g. 1 for ruby-3.4.5-1-x64-mswin64_140), used when a published zip has to be replaced. The published bucket is append-only, so a fixed package needs a fresh name.'
+        type: string
+        required: false
+        default: ''
     outputs:
       pkg-name:
         description: 'Name of the built package (zip root directory).'
@@ -35,6 +40,7 @@ jobs:
       pkg-name: ${{ steps.pkg.outputs.pkg_name }}
     env:
       TARGET_VERSION: ${{ inputs.version }}
+      REVISION: ${{ inputs.revision }}
       VCPKG_DEFAULT_TRIPLET: x64-windows
       # Commit in ruby/ruby that tool/binary-package.rb is fetched from.
       # Bumping this SHA is the whole sync with upstream.
@@ -214,7 +220,7 @@ jobs:
           read -r ver patch platform <<< "$info"
           test "$platform" = x64-mswin64_140
           if [ -n "$TARGET_VERSION" ]; then
-            pkg_name="ruby-$TARGET_VERSION-$platform"
+            pkg_name="ruby-$TARGET_VERSION${REVISION:+-$REVISION}-$platform"
           else
             suffix=""
             [ "$patch" = "-1" ] && suffix=dev
