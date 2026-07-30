@@ -76,6 +76,14 @@ Signing and publishing need repository configuration that does not live in this 
 
 While `SIGNPATH_ORGANIZATION_ID` is unset the signing step is skipped, packages ship unsigned, and the index records `signed: false` for them. The workflow logs a warning in that case.
 
+SignPath issues a test certificate before the production one. No machine trusts it, so full Authenticode verification cannot pass. Set the repository variable `SIGNPATH_TEST_CERTIFICATE` to `true` during that period: verification then only asserts that a signature from the expected certificate is present, which is enough to rehearse the pipeline. Unset it when the production certificate is imported, and set `SIGNPATH_CERTIFICATE_THUMBPRINT` to its SHA-1 thumbprint so verification pins our certificate rather than accepting any trusted one.
+
+### Rehearsing without publishing
+
+`pub/ruby/binaries/mswin64/` is append-only, so a rehearsal must not write there. Two knobs make that safe. `publish-binaries` takes a `DRY_RUN` input that fetches, signs and smoke-tests the staged zip, then reports what it would have published and stops. `tool/update_binaries_index.rb` only uploads when passed `--upload`, so running it by hand shows the diff against the published index without replacing it.
+
+`mswin-snapshot` needs no such knob: it writes to `dev/`, which is pruned to the newest 30 rather than kept forever, so it can be dispatched freely to exercise the S3 upload, the prune and index regeneration end to end.
+
 # How to trigger workflows
 
 ## Run snapshot tests with a patch

@@ -188,8 +188,13 @@ def create_index(bucket)
 end
 
 def diff_index
-  system(*%W(curl -fsS -o index.json~ https://cache.ruby-lang.org/#{INDEX_KEY}))
-  return unless File.exist?('index.json~')
+  STDERR.puts '=== index.json diff (published -> generated) ==='
+  unless system(*%W(curl -fsS -o index.json~ https://cache.ruby-lang.org/#{INDEX_KEY}))
+    STDERR.puts 'no published index to compare against'
+    return
+  end
+  # git diff exits 1 when there is a difference, which is the normal
+  # case, so its status says nothing useful here.
   system(*%w(git diff --no-index index.json~ index.json))
 end
 
@@ -202,7 +207,7 @@ def purge_fastly
   system(*%W(curl -sS -X PURGE -H Fastly-Soft-Purge:1 https://cache.ruby-lang.org/#{INDEX_KEY}))
 end
 
-def update_binaries_index
+def update_binaries_index(upload:)
   # Same hardcoded region as tool/update_index.rb, which addresses this
   # bucket successfully with it regardless of AWS_DEFAULT_REGION in the
   # workflow environment.
@@ -210,10 +215,16 @@ def update_binaries_index
   bucket = s3.bucket(BUCKET)
   create_index(bucket)
   diff_index
+  unless upload
+    STDERR.puts 'dry run: index.json generated locally. Pass --upload to publish it.'
+    return
+  end
   upload_index(bucket)
   purge_fastly
 end
 
 if __FILE__ == $0
-  update_binaries_index
+  # Uploading is opt-in, so running this by hand to see what it would
+  # produce cannot overwrite the published index.
+  update_binaries_index(upload: ARGV.include?('--upload'))
 end

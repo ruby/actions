@@ -98,6 +98,9 @@ jobs:
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
           artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
           certificate-thumbprint: ${{ vars.SIGNPATH_CERTIFICATE_THUMBPRINT }}
+          # Set SIGNPATH_TEST_CERTIFICATE to true while SignPath issues a
+          # test certificate, which no machine trusts.
+          require-trusted-chain: ${{ vars.SIGNPATH_TEST_CERTIFICATE != 'true' }}
 
       - name: Warn that the package is unsigned
         if: vars.SIGNPATH_ORGANIZATION_ID == ''
@@ -179,7 +182,7 @@ jobs:
       - name: Checkout ${{ github.repository }}
         run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
       - name: Update binaries index
-        run: ruby tool/update_binaries_index.rb
+        run: ruby tool/update_binaries_index.rb --upload
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
