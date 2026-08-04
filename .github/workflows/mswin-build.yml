@@ -123,8 +123,12 @@ jobs:
           key: windows-2022-mswin-vcpkg-${{ hashFiles('src/vcpkg.json') }}
 
       - name: Install libraries with vcpkg
+        # The registry pinned by `builtin-baseline` can need a newer tool
+        # than the vcpkg.exe shipped in the runner image, so re-bootstrap
+        # it to the version the pulled registry asks for.
         run: |
           git -C "%VCPKG_INSTALLATION_ROOT%" pull --quiet
+          call "%VCPKG_INSTALLATION_ROOT%\bootstrap-vcpkg.bat"
           vcpkg install
         working-directory: src
         shell: cmd
