@@ -29,6 +29,8 @@ jobs:
       - run: ./autogen.sh
       - run: ./configure
       - run: make Doxyfile
+      # SITEMAP_URL generates sitemap.xml under the HTML output (needs doxygen >= 1.9.7)
+      - run: echo 'SITEMAP_URL = https://docs.ruby-lang.org/capi/en/master/' >> Doxyfile
       - run: doxygen
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
