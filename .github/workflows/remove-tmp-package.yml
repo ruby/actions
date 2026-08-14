@@ -28,6 +28,16 @@ jobs:
           done
           aws s3 rm "s3://ftp.r-l.o/pub/tmp/ruby-info-${TARGET_VERSION}.yml"
           curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/ruby-info-${TARGET_VERSION}.yml"
+          # TARGET_VERSION arrives with the -draft suffix (the tarball
+          # staging names end in it), but the staged mswin zip carries
+          # the platform before that suffix, so the version alone is
+          # extracted and the name reassembled:
+          # ruby-<version>-x64-mswin64_140-draft.zip
+          mswin="ruby-${TARGET_VERSION%-draft}-x64-mswin64_140-draft"
+          for ext in .zip .zip.sha256; do
+            aws s3 rm "s3://ftp.r-l.o/pub/tmp/${mswin}$ext"
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/${mswin}$ext"
+          done
           curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/"
         env:
           GITHUB_EVENT_ACTION: ${{ github.event.action }}

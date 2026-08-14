@@ -1,0 +1,144 @@
+name: sign-package
+description: >-
+  Sign the PE files inside an mswin binary zip via SignPath and verify
+  the signatures.  Takes an unsigned zip and replaces it in place with
+  the signed one, so callers see a plain zip-in/zip-out contract and the
+  signing backend stays swappable.  Which files inside the zip get
+  signed is defined by the artifact configuration on the SignPath side.
+  Must run on a Windows runner (signtool).
+
+inputs:
+  zip:
+    description: Path to the package zip. Replaced in place by the signed zip.
+    required: true
+  package-name:
+    description: Package name, which is also the zip root directory (e.g. ruby-3.4.5-x64-mswin64_140).
+    required: true
+  api-token:
+    description: SignPath REST API token.
+    required: true
+  organization-id:
+    description: SignPath organization ID.
+    required: true
+  project-slug:
+    description: SignPath project slug.
+    required: true
+  signing-policy-slug:
+    description: SignPath signing policy slug.
+    required: true
+  artifact-configuration-slug:
+    description: SignPath artifact configuration slug.
+    required: false
+    default: ''
+  certificate-thumbprint:
+    description: >-
+      SHA-1 thumbprint of the expected signing certificate. When set,
+      verification requires every signature to come from that exact
+      certificate. Leave empty to accept any chain the default
+      Authenticode policy trusts, which does not distinguish our
+      certificate from any other trusted one.
+    required: false
+    default: ''
+  require-trusted-chain:
+    description: >-
+      Whether every signature must chain to a root the machine trusts.
+      Set to false while signing with a SignPath test certificate, which
+      is deliberately absent from the Windows trust store, so the
+      pipeline can be rehearsed end to end. Verification then only
+      asserts that a signature from the expected certificate is present,
+      which is a rehearsal check, not a release gate.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Upload unsigned artifact
+      id: unsigned
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.package-name }}-unsigned
+        path: ${{ inputs.zip }}
+
+    - name: Submit signing request
+      id: signing
+      uses: signpath/github-action-submit-signing-request@b9d91eadd323de506c0c81cf0c7fe7438f3360fd # v2.2
+      with:
+        api-token: ${{ inputs.api-token }}
+        organization-id: ${{ inputs.organization-id }}
+        project-slug: ${{ inputs.project-slug }}
+        signing-policy-slug: ${{ inputs.signing-policy-slug }}
+        artifact-configuration-slug: ${{ inputs.artifact-configuration-slug }}
+        github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+        wait-for-completion: true
+        output-artifact-directory: signed-artifact
+
+    - name: Replace zip with the signed one
+      run: |
+        set -ex
+        mv -f "signed-artifact/$(basename "$ZIP")" "$ZIP"
+        rm -rf signed-artifact
+      env:
+        ZIP: ${{ inputs.zip }}
+      shell: bash
+
+    - name: Verify signatures
+      # Authenticode-verify every PE that the artifact configuration
+      # signs: the interpreter binaries and the bundled extension .so
+      # files.  The vcpkg DLLs are third-party builds and stay unsigned,
+      # so they are deliberately not checked here.
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*\x64\signtool.exe" -ErrorAction SilentlyContinue |
+          Sort-Object FullName | Select-Object -Last 1
+        if (-not $signtool) { throw 'signtool.exe not found under Windows Kits\10\bin; check the runner image' }
+        New-Item -ItemType Directory verify-signed | Out-Null
+        tar -x -f "$env:ZIP" -C verify-signed
+        $root = "verify-signed\$env:PKG_NAME"
+        $targets = @(Get-Item "$root\bin\ruby.exe", "$root\bin\rubyw.exe") +
+          @(Get-ChildItem "$root\bin\x64-vcruntime140-ruby*.dll") +
+          @(Get-ChildItem -Recurse "$root\lib\ruby" -Filter *.so)
+        if ($targets.Count -lt 3) { throw "unexpectedly few signing targets: $($targets.Count)" }
+        if ($env:REQUIRE_TRUST -eq 'true') {
+          # /tw fails a signature that carries no RFC 3161 timestamp,
+          # which SIGNING.md promises.  /sha1 pins the signing
+          # certificate when a thumbprint is configured; without it the
+          # default policy accepts any trusted chain, not specifically
+          # ours.
+          $flags = @('/pa', '/tw')
+          if ($env:THUMBPRINT) { $flags += @('/sha1', $env:THUMBPRINT) }
+          foreach ($f in $targets) {
+            & $signtool.FullName verify @flags /q $f.FullName
+            if ($LASTEXITCODE -ne 0) {
+              # /q suppressed the reason, so re-run verbose to record
+              # whether the signature is missing, the chain is untrusted,
+              # the timestamp is absent or the certificate is not ours.
+              & $signtool.FullName verify @flags /v $f.FullName
+              throw "signature verification failed: $($f.FullName)"
+            }
+          }
+        } else {
+          # Rehearsal against a test certificate, which no machine
+          # trusts.  Assert only that a signature from the expected
+          # certificate is present; chain trust and the timestamp are
+          # checked by the branch above once the production certificate
+          # is in place.
+          Write-Host '::warning::verifying without requiring a trusted chain; this is a rehearsal, not a release gate'
+          foreach ($f in $targets) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            if (-not $sig.SignerCertificate) { throw "no signature: $($f.FullName)" }
+            if ($env:THUMBPRINT -and $sig.SignerCertificate.Thumbprint -ne $env:THUMBPRINT) {
+              throw "unexpected signer $($sig.SignerCertificate.Thumbprint) on $($f.FullName)"
+            }
+          }
+          $signer = (Get-AuthenticodeSignature $targets[0].FullName).SignerCertificate
+          Write-Host "signer: $($signer.Subject) ($($signer.Thumbprint))"
+        }
+        Write-Host "verified $($targets.Count) signed files"
+        Remove-Item -Recurse -Force verify-signed
+      env:
+        ZIP: ${{ inputs.zip }}
+        PKG_NAME: ${{ inputs.package-name }}
+        THUMBPRINT: ${{ inputs.certificate-thumbprint }}
+        REQUIRE_TRUST: ${{ inputs.require-trusted-chain }}
+      shell: pwsh

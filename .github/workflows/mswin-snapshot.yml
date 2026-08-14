@@ -1,7 +1,9 @@
 name: mswin-snapshot
 
 # Daily dev build of the master branch as a relocatable mswin binary
-# zip.  The heavy lifting lives in mswin-build.yml.
+# zip, published unsigned under pub/ruby/binaries/mswin64/dev/.  Only
+# the newest 30 dev builds are kept.  The heavy lifting lives in
+# mswin-build.yml.
 
 on:
   schedule:
@@ -16,3 +18,82 @@ jobs:
     if: ${{ github.event_name != 'schedule' || github.repository == 'ruby/actions' }}
     uses: ./.github/workflows/mswin-build.yml
     secrets: inherit
+
+  upload:
+    needs: build
+    if: ${{ github.repository == 'ruby/actions' }}
+    runs-on: ubuntu-latest
+    env:
+      PKG_NAME: ${{ needs.build.outputs.pkg-name }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-west-2
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q || :
+          sudo apt-get install --no-install-recommends -y ruby bundler
+
+      - name: Checkout ${{ github.repository }}
+        run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.build.outputs.pkg-name }}
+          path: pkg
+
+      - name: Upload s3
+        # The dev package names embed the commit date and hash, so they
+        # are immutable; overwriting an existing name just re-uploads
+        # identical content.  Dev builds are never signed.
+        run: |
+          set -ex
+          dev=pub/ruby/binaries/mswin64/dev
+          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/$dev/$PKG_NAME.zip" --no-progress --metadata signed=false
+          aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/$dev/$PKG_NAME.zip.sha256" --no-progress
+
+      - name: Prune old dev builds
+        # Keep the newest 30 dev builds.  Listing goes through
+        # list-objects-v2 rather than `aws s3 ls`, whose human-readable
+        # columns misparse any name containing a space, and only names
+        # matching the dev contract are candidates, so an object that
+        # does not belong here is never silently deleted.  Ordering is by
+        # the date embedded in the name: sorting the whole name orders
+        # lexically by version and breaks once 4.9 and 4.10 coexist.
+        run: |
+          set -ex
+          dev=pub/ruby/binaries/mswin64/dev
+          aws s3api list-objects-v2 --bucket ftp.r-l.o --prefix "$dev/" \
+            --query 'Contents[].Key' --output text > keys.txt
+          tr '\t' '\n' < keys.txt | sed -n "s#^$dev/##p" |
+            grep -E '^ruby-[0-9]+\.[0-9]+\.[0-9]+dev-[0-9]{8}-[0-9a-f]{10}-x64-mswin64_140\.zip$' |
+            sort -t- -k3,3n -k4,4 | head -n -30 > prune.txt || :
+          if [ ! -s prune.txt ]; then
+            echo "nothing to prune"
+            exit 0
+          fi
+          { echo "## Pruned dev builds"; sed 's/^/- /' prune.txt; } >> "$GITHUB_STEP_SUMMARY"
+          while read -r zip; do
+            aws s3 rm "s3://ftp.r-l.o/$dev/$zip"
+            aws s3 rm "s3://ftp.r-l.o/$dev/$zip.sha256"
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$dev/$zip"
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$dev/$zip.sha256"
+          done < prune.txt
+          curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$dev/"
+
+      - name: Update binaries index
+        run: ruby tool/update_binaries_index.rb --upload
+
+      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: mswin dev upload <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()

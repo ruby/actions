@@ -1,8 +1,13 @@
 name: mswin-release
 
 # Build a relocatable mswin binary zip from an official release
-# tarball.  Works for Ruby 3.3 and later.  The heavy lifting lives in
+# tarball, sign it, and publish it under pub/ruby/binaries/mswin64/.
+# Works for Ruby 3.3 and later.  The heavy lifting lives in
 # mswin-build.yml.
+#
+# This is the backfill path for versions released before the mswin
+# pipeline existed (or after a signing-only reissue).  Regular releases
+# ship through draft-release.yml and publish-binaries.yml instead.
 
 on:
   workflow_dispatch:
@@ -10,13 +15,190 @@ on:
       TARGET_VERSION:
         description: Packaging target version (e.g. 3.4.5)
         required: true
+      REVISION:
+        description: Reissue revision (e.g. 1 publishes ruby-<version>-1-x64-mswin64_140). Leave empty for the first publication.
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 jobs:
+  # Reject a name that is already taken before spending an hour of build
+  # time, a signing approval and a SignPath signing request on it.  The
+  # publish job checks again, since the bucket can change in between.
+  precheck:
+    if: ${{ github.repository == 'ruby/actions' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the destination is free
+        run: |
+          set -ex
+          # Anchored regex, not a case glob: the version flows into a
+          # package name that mswin-build writes to GITHUB_ENV, so a value
+          # with an embedded newline must not pass here.
+          if [[ ! "$TARGET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-z][a-z0-9]*)?$ ]]; then
+            echo "::error::TARGET_VERSION is not a release version: $TARGET_VERSION"
+            exit 1
+          fi
+          if [[ ! "$REVISION" =~ ^([1-9][0-9]*)?$ ]]; then
+            echo "::error::REVISION must be a positive integer without leading zeros, got: $REVISION"
+            exit 1
+          fi
+          dest="pub/ruby/binaries/mswin64/ruby-${TARGET_VERSION}${REVISION:+-$REVISION}-x64-mswin64_140.zip"
+          if aws s3api head-object --bucket ftp.r-l.o --key "$dest" >/dev/null 2>&1; then
+            echo "::error::s3://ftp.r-l.o/$dest is already published. Reissue under the next revision instead."
+            exit 1
+          fi
+        env:
+          TARGET_VERSION: ${{ inputs.TARGET_VERSION }}
+          REVISION: ${{ inputs.REVISION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+
   build:
+    needs: precheck
     uses: ./.github/workflows/mswin-build.yml
     with:
       version: ${{ inputs.TARGET_VERSION }}
+      revision: ${{ inputs.REVISION }}
     secrets: inherit
+
+  publish:
+    needs: build
+    runs-on: windows-2022
+    # Deployment protection on the signing environment provides the
+    # manual approval gate and confines the SignPath credentials.
+    environment: signing
+    permissions:
+      contents: read
+      # The SignPath connector fetches the unsigned artifact through the
+      # GitHub API.
+      actions: read
+    env:
+      PKG_NAME: ${{ needs.build.outputs.pkg-name }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.build.outputs.pkg-name }}
+          path: pkg
+
+      - name: Sign package
+        # Skipped until the SignPath project is provisioned.  The zip is
+        # then published unsigned and the binaries index records
+        # signed=false for it.
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: ./.github/actions/sign-package
+        with:
+          zip: pkg/${{ env.PKG_NAME }}.zip
+          package-name: ${{ env.PKG_NAME }}
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          certificate-thumbprint: ${{ vars.SIGNPATH_CERTIFICATE_THUMBPRINT }}
+          # Set SIGNPATH_TEST_CERTIFICATE to true while SignPath issues a
+          # test certificate, which no machine trusts.
+          require-trusted-chain: ${{ vars.SIGNPATH_TEST_CERTIFICATE != 'true' }}
+
+      - name: Warn that the package is unsigned
+        if: vars.SIGNPATH_ORGANIZATION_ID == ''
+        run: echo "::warning::SignPath is not configured, publishing $PKG_NAME UNSIGNED. See the Required setup section of the README."
+        shell: bash
+
+      - name: Refresh checksum
+        # Signing rewrites the zip, so the checksum shipped next to it
+        # must be regenerated afterwards.
+        run: sha256sum "$PKG_NAME.zip" > "$PKG_NAME.zip.sha256"
+        working-directory: pkg
+        shell: bash
+
+      - name: Smoke test
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkg = $env:PKG_NAME
+          New-Item -ItemType Directory smoke | Out-Null
+          tar -x -f "pkg\$pkg.zip" -C smoke
+          $env:Path = "$env:SystemRoot\System32"
+          $out = & "smoke\$pkg\bin\ruby.exe" -v -ropenssl -e "puts :ok"
+          $out | Write-Host
+          if ($LASTEXITCODE -ne 0 -or $out -notcontains 'ok') { throw 'smoke test failed' }
+        shell: pwsh
+
+      - name: Upload s3
+        run: |
+          set -ex
+          signed=false
+          if [ -n "$SIGNPATH_ORGANIZATION_ID" ]; then signed=true; fi
+          dest="pub/ruby/binaries/mswin64/$PKG_NAME.zip"
+          if aws s3api head-object --bucket ftp.r-l.o --key "$dest" >/dev/null 2>&1; then
+            echo "::error::s3://ftp.r-l.o/$dest already exists; refusing to overwrite a published package"
+            exit 1
+          fi
+          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/$dest" --no-progress --metadata signed=$signed
+          aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/$dest.sha256" --no-progress
+          for f in "$dest" "$dest.sha256"; do
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$f"
+          done
+          {
+            echo "## mswin package published"
+            echo "- name: \`$PKG_NAME\`"
+            echo "- signed: $signed"
+            echo "- sha256: \`$(cut -d' ' -f1 "pkg/$PKG_NAME.zip.sha256")\`"
+            echo "- url: https://cache.ruby-lang.org/$dest"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+        shell: bash
+
+      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "title": "Publish mswin package ${{ inputs.TARGET_VERSION }}",
+                "title_link": "https://cache.ruby-lang.org/pub/ruby/binaries/mswin64/",
+                "text": "${{ job.status }}: publish <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "${{ job.status == 'success' && 'good' || 'danger' }}"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: always()
+
+  index:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q || :
+          sudo apt-get install --no-install-recommends -y ruby bundler
+      - name: Checkout ${{ github.repository }}
+        run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
+      - name: Update binaries index
+        run: ruby tool/update_binaries_index.rb --upload
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "text": "${{ job.status }}: binaries index update <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "color": "danger"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+        if: failure()

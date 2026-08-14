@@ -14,6 +14,20 @@ on:
         type: string
         required: false
         default: ''
+      tarball-artifact:
+        description: 'Name of a workflow artifact holding ruby-<version>.tar.gz to build from, e.g. the Packages artifact of a draft release. The tarball comes from the same run, so the release-index checksum verification is skipped.'
+        type: string
+        required: false
+        default: ''
+      revision:
+        description: 'Reissue revision appended to the release package name (e.g. 1 for ruby-3.4.5-1-x64-mswin64_140), used when a published zip has to be replaced. The published bucket is append-only, so a fixed package needs a fresh name.'
+        type: string
+        required: false
+        default: ''
+    outputs:
+      pkg-name:
+        description: 'Name of the built package (zip root directory).'
+        value: ${{ jobs.build.outputs.pkg-name }}
 
 permissions:
   contents: read
@@ -22,8 +36,11 @@ jobs:
   build:
     name: mswin package ${{ inputs.version || 'master' }}
     runs-on: windows-2022
+    outputs:
+      pkg-name: ${{ steps.pkg.outputs.pkg_name }}
     env:
       TARGET_VERSION: ${{ inputs.version }}
+      REVISION: ${{ inputs.revision }}
       VCPKG_DEFAULT_TRIPLET: x64-windows
       # Commit in ruby/ruby that tool/binary-package.rb is fetched from.
       # Bumping this SHA is the whole sync with upstream.
@@ -39,14 +56,27 @@ jobs:
           bundler: none
           windows-toolchain: none
 
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: inputs.tarball-artifact != ''
+        with:
+          name: ${{ inputs.tarball-artifact }}
+          path: tarball
+
       - name: Fetch source
         # A release is built from the official release tarball, verified
-        # against the release index.  A snapshot is built from the master
-        # branch of ruby/ruby.
+        # against the release index.  A draft release passes its freshly
+        # built tarball as a workflow artifact instead, since it is not
+        # in the index yet.  A snapshot is built from the master branch
+        # of ruby/ruby.
+        env:
+          TARBALL_ARTIFACT: ${{ inputs.tarball-artifact }}
         run: |
           set -ex
           mkdir build pkg
-          if [ -n "$TARGET_VERSION" ]; then
+          if [ -n "$TARBALL_ARTIFACT" ]; then
+            tar xf "tarball/ruby-$TARGET_VERSION.tar.gz"
+            mv "ruby-$TARGET_VERSION" src
+          elif [ -n "$TARGET_VERSION" ]; then
             series=$(echo "$TARGET_VERSION" | sed -E 's/^([0-9]+\.[0-9]+)\..*/\1/')
             curl -fsSLo ruby-src.tar.gz "https://cache.ruby-lang.org/pub/ruby/$series/ruby-$TARGET_VERSION.tar.gz"
             curl -fsSLo index.txt https://cache.ruby-lang.org/pub/ruby/index.txt
@@ -182,26 +212,44 @@ jobs:
         shell: cmd
 
       - name: Determine package name
+        id: pkg
         # A dev build must never share a name with a release package, so
         # snapshots embed the commit date and hash.  The staged ruby is
         # relocatable, and the build directory on PATH provides the vcpkg
         # DLLs it links against.
         run: |
           set -ex
+          # A malformed revision would either be parsed as a prerelease
+          # suffix or match nothing at all in the binaries index, and the
+          # published bucket is append-only, so reject it before the name
+          # reaches S3.
+          case "$REVISION" in
+            '' | [1-9] | [1-9][0-9]) ;;
+            *) echo "::error::revision must be a positive integer without leading zeros, got: $REVISION"; exit 1 ;;
+          esac
           ruby_exe=$(find stage -name ruby.exe -path '*bin*')
           info=$(PATH="$PWD/build:$PATH" "$ruby_exe" -e 'print [RUBY_VERSION, RUBY_PATCHLEVEL, RUBY_PLATFORM].join(" ")')
           read -r ver patch platform <<< "$info"
           test "$platform" = x64-mswin64_140
           if [ -n "$TARGET_VERSION" ]; then
-            pkg_name="ruby-$TARGET_VERSION-$platform"
+            pkg_name="ruby-$TARGET_VERSION${REVISION:+-$REVISION}-$platform"
           else
             suffix=""
             [ "$patch" = "-1" ] && suffix=dev
             date=$(git -C src log -1 --date=format:%Y%m%d --format=%cd)
+            # --short=<n> is a lower bound: git lengthens the prefix when
+            # it is ambiguous.  The binaries index matches exactly ten
+            # hex digits, so a longer one has to fail here rather than
+            # after the package is uploaded.
             sha=$(git -C src rev-parse --short=10 HEAD)
+            case "$sha" in
+              [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+              *) echo "::error::abbreviated commit is not ten hex digits: $sha"; exit 1 ;;
+            esac
             pkg_name="ruby-$ver$suffix-$date-$sha-$platform"
           fi
           echo "PKG_NAME=$pkg_name" >> "$GITHUB_ENV"
+          echo "pkg_name=$pkg_name" >> "$GITHUB_OUTPUT"
         shell: bash
 
       - name: Fetch packaging script
