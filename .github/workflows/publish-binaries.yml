@@ -56,10 +56,13 @@ jobs:
         # before handing it to the signing service.
         run: |
           set -ex
-          case "$TARGET_VERSION" in
-            [0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "::error::TARGET_VERSION is not a release version: $TARGET_VERSION"; exit 1 ;;
-          esac
+          # Anchored, so a value with an embedded newline cannot pass and
+          # then inject a line into GITHUB_ENV below.  A case glob would
+          # let "1.2.3\nAWS_ENDPOINT_URL=..." through.
+          if [[ ! "$TARGET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-z][a-z0-9]*)?$ ]]; then
+            echo "::error::TARGET_VERSION is not a release version: $TARGET_VERSION"
+            exit 1
+          fi
           pkg="ruby-${TARGET_VERSION}-x64-mswin64_140"
           if ! aws s3api head-object --bucket ftp.r-l.o --key "pub/tmp/${pkg}-draft.zip" >/dev/null 2>&1; then
             echo "::error::no staged zip at pub/tmp/${pkg}-draft.zip. Check that draft-release's mswin-stage job succeeded for ${TARGET_VERSION}."
