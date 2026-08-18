@@ -48,6 +48,10 @@ require "bundler/inline"
 gemfile do
   source "https://rubygems.org"
   gem "aws-sdk-s3"
+  # aws-sdk-core probes for an XML library at runtime instead of
+  # depending on one, and bundler hides the bundled rexml gem unless it
+  # is listed here.
+  gem "rexml"
 end
 
 require 'aws-sdk-s3'
