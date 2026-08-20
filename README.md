@@ -6,6 +6,7 @@
 [![Actions Status: mswin-build](https://github.com/ruby/actions/workflows/mswin-build/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"mswin-build")
 [![Actions Status: mswin-release](https://github.com/ruby/actions/workflows/mswin-release/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"mswin-release")
 [![Actions Status: mswin-snapshot](https://github.com/ruby/actions/workflows/mswin-snapshot/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"mswin-snapshot")
+[![Actions Status: Publish mswin binary package](https://github.com/ruby/actions/workflows/Publish%20mswin%20binary%20package/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"Publish+mswin+binary+package")
 [![Actions Status: Remove pub\/tmp\/ruby-\*](https://github.com/ruby/actions/workflows/Remove%20pub%2Ftmp%2Fruby-*/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"Remove+pub/tmp/ruby-*")
 [![Actions Status: ruby\_versions](https://github.com/ruby/actions/workflows/ruby_versions/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"ruby_versions")
 [![Actions Status: Test ruby\_versions workflow](https://github.com/ruby/actions/workflows/Test%20ruby_versions%20workflow/badge.svg)](https://github.com/ruby/actions/actions?query=workflow%3A"Test+ruby_versions+workflow")
