@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: read
+  # for aws-actions/configure-aws-credentials (OIDC, the docs.r-l.o sync below)
+  id-token: write
 
 jobs:
   make:
@@ -77,6 +79,64 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
         if: ${{ github.repository == 'ruby/actions' }}
+
+      # ---- docs.ruby-lang.org/en/<version>/ direct sync ----
+      # docs.ruby-lang.org is now served from the docs.r-l.o S3 bucket
+      # (ruby/ruby-infra-recipe#73). The steps below update the site right
+      # after the tar.xz archive upload above (which stays as-is for
+      # downloaders of cache.ruby-lang.org/pub/ruby/doc/), replacing the
+      # pull-based server cron (ruby/docs.ruby-lang.org system/rdoc-static-all).
+      # Auth is OIDC: the docs-sync-ruby-actions role (ruby/ruby-infra-recipe
+      # cdn/iam.tf) may only write the en/* and capi/* prefixes. Until the
+      # DOCS_SYNC_ROLE_ARN repository variable is set, these steps are skipped.
+
+      # The per-version sitemap rdoc-static-all used to generate; the
+      # /en/sitemap.xml index (ruby/docs.ruby-lang.org public/en/) points here.
+      - name: Make sitemap
+        run: |
+          ruby -e '
+            require "cgi/escape"
+            version = ARGV[0]
+            base = "https://docs.ruby-lang.org/en/#{version}/"
+            dir = "/tmp/html/en/#{version}"
+            paths = Dir.glob("**/*.html", base: dir).sort
+            File.open("#{dir}/sitemap.xml", "w") do |f|
+              f.puts %(<?xml version="1.0" encoding="UTF-8"?>)
+              f.puts %(<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">)
+              paths.each do |path|
+                f.puts "<url><loc>#{CGI.escapeHTML(base + path)}</loc></url>"
+              end
+              f.puts %(</urlset>)
+            end
+            puts "#{dir}/sitemap.xml: #{paths.size} URLs"
+          ' "${{ matrix.version }}"
+        if: ${{ github.repository == 'ruby/actions' && vars.DOCS_SYNC_ROLE_ARN != '' }}
+
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          role-to-assume: ${{ vars.DOCS_SYNC_ROLE_ARN }}
+          aws-region: us-east-1
+        if: ${{ github.repository == 'ruby/actions' && vars.DOCS_SYNC_ROLE_ARN != '' }}
+
+      - name: Sync to s3://docs.r-l.o/en/
+        run: >-
+          aws s3 sync "/tmp/html/en/${{ matrix.version }}"
+          "s3://docs.r-l.o/en/${{ matrix.version }}" --delete --no-progress
+        if: ${{ github.repository == 'ruby/actions' && vars.DOCS_SYNC_ROLE_ARN != '' }}
+
+      # Same soft purge rdoc-static-all did (batch form: keys go in the
+      # Surrogate-Key request header). Reuses the doxygen.yml credentials.
+      - name: Purge en/${{ matrix.version }} on Fastly
+        run: >-
+          curl -fsS -X POST
+          "https://api.fastly.com/service/${DOCS_FASTLY_SERVICE_ID}/purge"
+          -H "Fastly-Key: ${DOCS_FASTLY_KEY}"
+          -H "Surrogate-Key: en/${{ matrix.version }}"
+          -H "fastly-soft-purge: 1"
+        env:
+          DOCS_FASTLY_KEY: ${{ secrets.DOCS_FASTLY_KEY }}
+          DOCS_FASTLY_SERVICE_ID: ${{ secrets.DOCS_FASTLY_SERVICE_ID }}
+        if: ${{ github.repository == 'ruby/actions' && vars.DOCS_SYNC_ROLE_ARN != '' }}
 
       - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
         with:
