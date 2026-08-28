@@ -49,6 +49,14 @@ inputs:
       which is a rehearsal check, not a release gate.
     required: false
     default: 'true'
+  wait-timeout-seconds:
+    description: >-
+      How long to wait for the signing request to complete. Requests
+      signed with the SignPath Foundation production certificate need a
+      manual approval in the SignPath UI, so this covers the time until
+      an approver gets to it, not just the signing itself.
+    required: false
+    default: '3600'
 
 runs:
   using: composite
@@ -71,6 +79,7 @@ runs:
         artifact-configuration-slug: ${{ inputs.artifact-configuration-slug }}
         github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
         wait-for-completion: true
+        wait-for-completion-timeout-in-seconds: ${{ inputs.wait-timeout-seconds }}
         output-artifact-directory: signed-artifact
 
     - name: Replace zip with the signed one
