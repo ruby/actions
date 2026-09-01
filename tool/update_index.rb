@@ -23,7 +23,22 @@ DIRS = %w(
   4.0
 ).freeze
 
+def load_existing_index(bucket)
+  res = bucket.object("pub/ruby/index.txt").get
+  entries = {}
+  res.body.read.each_line do |line|
+    line = line.chomp
+    columns = line.split("\t")
+    next unless columns.length == 5
+    entries[columns[1]] = line
+  end
+  [entries, res.last_modified]
+rescue Aws::S3::Errors::NoSuchKey
+  [{}, nil]
+end
+
 def create_index(bucket)
+  existing_entries, index_mtime = load_existing_index(bucket)
   cache_dir = Pathname(ENV['XDG_CACHE_HOME'] || "#{ENV['HOME']}/.cache") + 'snapshot'
   cache_dir.mkpath
   File.open('index.txt', 'w') do |f|
@@ -31,12 +46,16 @@ def create_index(bucket)
     DIRS.each do |dir|
       bucket.objects({prefix: "pub/ruby/#{dir}"}).each do |pkg|
         path = Pathname(pkg.key)
-        STDERR.puts "Processing #{path}"
         next unless EXT_NAMES.include?(path.extname)
         basename = path.basename.to_s
         name = basename.sub(/#{Regexp.union(PKG_EXTS)}\z/o, '')
         next unless name.start_with?('ruby-')
         uri = URI("https://cache.ruby-lang.org/#{pkg.key}")
+        if index_mtime && pkg.last_modified < index_mtime && (line = existing_entries[uri.to_s])
+          f.puts line
+          next
+        end
+        STDERR.puts "Processing #{path}"
         cache = cache_dir + basename
         if cache.exist?
           STDERR.puts 'Read from cache'
