@@ -112,7 +112,7 @@ jobs:
           ' "${{ matrix.version }}"
         if: ${{ github.repository == 'ruby/actions' && vars.DOCS_SYNC_ROLE_ARN != '' }}
 
-      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+      - uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ vars.DOCS_SYNC_ROLE_ARN }}
           aws-region: us-east-1
