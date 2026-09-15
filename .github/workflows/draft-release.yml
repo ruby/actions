@@ -332,3 +332,18 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/ruby/www.ruby-lang.org/dispatches \
             -d "{\"event_type\": \"release\", \"client_payload\": {\"version\": \"${TARGET_VERSION}\"}}"
+      # The reusable test workflows only report failures, so this is the
+      # one signal that the draft is fully verified and publish can start.
+      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "title": "Ruby ${{ needs.info.outputs.target_version }} is ready to publish",
+                "title_link": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                "text": "All tests passed and the release pull-request on <https://github.com/ruby/www.ruby-lang.org/pulls|ruby/www.ruby-lang.org> was requested",
+                "color": "good"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
