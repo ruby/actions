@@ -87,10 +87,10 @@ jobs:
           path: pkg
 
       - name: Sign package
-        # Skipped until the SignPath project is provisioned.  The zip is
-        # then published unsigned and the binaries index records
-        # signed=false for it.
-        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        id: sign
+        # This workflow always publishes, so it never signs with a test
+        # certificate.  See the same step in publish-binaries.yml.
+        if: vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_TEST_CERTIFICATE != 'true'
         uses: ./.github/actions/sign-package
         with:
           zip: pkg/${{ env.PKG_NAME }}.zip
@@ -106,8 +106,8 @@ jobs:
           require-trusted-chain: ${{ vars.SIGNPATH_TEST_CERTIFICATE != 'true' }}
 
       - name: Warn that the package is unsigned
-        if: vars.SIGNPATH_ORGANIZATION_ID == ''
-        run: echo "::warning::SignPath is not configured, publishing $PKG_NAME UNSIGNED. See the Required setup section of the README."
+        if: steps.sign.outcome == 'skipped'
+        run: echo "::warning::No production signing certificate, publishing $PKG_NAME UNSIGNED. See the Required setup section of the README."
         shell: bash
 
       - name: Refresh checksum
@@ -132,14 +132,12 @@ jobs:
       - name: Upload s3
         run: |
           set -ex
-          signed=false
-          if [ -n "$SIGNPATH_ORGANIZATION_ID" ]; then signed=true; fi
           dest="pub/ruby/binaries/mswin64/$PKG_NAME.zip"
           if aws s3api head-object --bucket ftp.r-l.o --key "$dest" >/dev/null 2>&1; then
             echo "::error::s3://ftp.r-l.o/$dest already exists; refusing to overwrite a published package"
             exit 1
           fi
-          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/$dest" --no-progress --metadata signed=$signed
+          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/$dest" --no-progress --metadata signed=$SIGNED
           aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/$dest.sha256" --no-progress
           for f in "$dest" "$dest.sha256"; do
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$f"
@@ -147,12 +145,12 @@ jobs:
           {
             echo "## mswin package published"
             echo "- name: \`$PKG_NAME\`"
-            echo "- signed: $signed"
+            echo "- signed: $SIGNED"
             echo "- sha256: \`$(cut -d' ' -f1 "pkg/$PKG_NAME.zip.sha256")\`"
             echo "- url: https://cache.ruby-lang.org/$dest"
           } >> "$GITHUB_STEP_SUMMARY"
         env:
-          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          SIGNED: ${{ steps.sign.outcome == 'success' }}
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2

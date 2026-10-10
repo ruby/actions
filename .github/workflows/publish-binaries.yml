@@ -81,10 +81,12 @@ jobs:
         shell: bash
 
       - name: Sign package
-        # Skipped until the SignPath project is provisioned.  The zip is
-        # then published unsigned and the binaries index records
-        # signed=false for it.
-        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        id: sign
+        # Skipped until a production certificate is in place, and the zip
+        # is then published unsigned.  A test certificate signs DRY_RUN
+        # rehearsals only: no machine trusts it, so a zip carrying it must
+        # never reach the append-only bucket.
+        if: vars.SIGNPATH_ORGANIZATION_ID != '' && (vars.SIGNPATH_TEST_CERTIFICATE != 'true' || inputs.DRY_RUN)
         uses: ./.github/actions/sign-package
         with:
           zip: pkg/${{ env.PKG_NAME }}.zip
@@ -100,8 +102,8 @@ jobs:
           require-trusted-chain: ${{ vars.SIGNPATH_TEST_CERTIFICATE != 'true' }}
 
       - name: Warn that the package is unsigned
-        if: vars.SIGNPATH_ORGANIZATION_ID == ''
-        run: echo "::warning::SignPath is not configured, publishing $PKG_NAME UNSIGNED. See the Required setup section of the README."
+        if: steps.sign.outcome == 'skipped'
+        run: echo "::warning::No production signing certificate, publishing $PKG_NAME UNSIGNED. See the Required setup section of the README."
         shell: bash
 
       - name: Refresh checksum
@@ -132,14 +134,12 @@ jobs:
         if: ${{ !inputs.DRY_RUN }}
         run: |
           set -ex
-          signed=false
-          if [ -n "$SIGNPATH_ORGANIZATION_ID" ]; then signed=true; fi
           dest="pub/ruby/binaries/mswin64/$PKG_NAME.zip"
           if aws s3api head-object --bucket ftp.r-l.o --key "$dest" >/dev/null 2>&1; then
             echo "::error::s3://ftp.r-l.o/$dest already exists; refusing to overwrite a published package. Reissue under a revision with mswin-release instead."
             exit 1
           fi
-          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/$dest" --no-progress --metadata signed=$signed
+          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/$dest" --no-progress --metadata signed=$SIGNED
           aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/$dest.sha256" --no-progress
           for f in "$dest" "$dest.sha256"; do
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$f"
@@ -147,12 +147,12 @@ jobs:
           {
             echo "## mswin package published"
             echo "- name: \`$PKG_NAME\`"
-            echo "- signed: $signed"
+            echo "- signed: $SIGNED"
             echo "- sha256: \`$(cut -d' ' -f1 "pkg/$PKG_NAME.zip.sha256")\`"
             echo "- url: https://cache.ruby-lang.org/$dest"
           } >> "$GITHUB_STEP_SUMMARY"
         env:
-          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          SIGNED: ${{ steps.sign.outcome == 'success' }}
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
@@ -162,20 +162,21 @@ jobs:
         if: ${{ inputs.DRY_RUN }}
         run: |
           set -ex
-          signed=false
-          if [ -n "$SIGNPATH_ORGANIZATION_ID" ]; then signed=true; fi
+          note=""
+          if [ "$SIGNED" = true ] && [ "$TEST_CERTIFICATE" = true ]; then note=" (test certificate, rehearsal only)"; fi
           dest="pub/ruby/binaries/mswin64/$PKG_NAME.zip"
           {
             echo "## Dry run, nothing was published"
             echo "- name: \`$PKG_NAME\`"
-            echo "- signed: $signed"
+            echo "- signed: $SIGNED$note"
             echo "- sha256: \`$(cut -d' ' -f1 "pkg/$PKG_NAME.zip.sha256")\`"
             echo "- would upload to: \`s3://ftp.r-l.o/$dest\`"
             echo ""
             echo "The staged zip in \`pub/tmp/\` and the index were left untouched."
           } >> "$GITHUB_STEP_SUMMARY"
         env:
-          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          SIGNED: ${{ steps.sign.outcome == 'success' }}
+          TEST_CERTIFICATE: ${{ vars.SIGNPATH_TEST_CERTIFICATE }}
         shell: bash
 
       - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0

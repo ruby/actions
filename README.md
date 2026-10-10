@@ -75,9 +75,9 @@ Signing and publishing need repository configuration that does not live in this 
 - A `SIGNPATH_API_TOKEN` secret on the `signing` environment.
 - The SignPath GitHub App installed on this repository, which is how SignPath verifies build provenance.
 
-While `SIGNPATH_ORGANIZATION_ID` is unset the signing step is skipped, packages ship unsigned, and the index records `signed: false` for them. The workflow logs a warning in that case.
+While `SIGNPATH_ORGANIZATION_ID` is unset, or `SIGNPATH_TEST_CERTIFICATE` is `true`, the signing step is skipped on every real publish, packages ship unsigned, and the index records `signed: false` for them. The workflow logs a warning in that case.
 
-SignPath issues a test certificate before the production one. No machine trusts it, so full Authenticode verification cannot pass. Set the repository variable `SIGNPATH_TEST_CERTIFICATE` to `true` during that period: verification then only asserts that a signature from the expected certificate is present, which is enough to rehearse the pipeline. Unset it when the production certificate is imported, and set `SIGNPATH_CERTIFICATE_THUMBPRINT` to its SHA-1 thumbprint so verification pins our certificate rather than accepting any trusted one.
+SignPath issues a test certificate before the production one. No machine trusts it, so full Authenticode verification cannot pass, and a package signed with it must never be published. Set the repository variable `SIGNPATH_TEST_CERTIFICATE` to `true` during that period: only `DRY_RUN` runs of `publish-binaries` sign then, and verification only asserts that a signature from the expected certificate is present, which is enough to rehearse the pipeline. Unset it when the production certificate is imported, and set `SIGNPATH_CERTIFICATE_THUMBPRINT` to its SHA-1 thumbprint so verification pins our certificate rather than accepting any trusted one.
 
 ### Rehearsing without publishing
 
