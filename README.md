@@ -74,6 +74,7 @@ Signing and publishing need repository configuration that does not live in this 
 - Repository variables `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG` and `SIGNPATH_ARTIFACT_CONFIGURATION_SLUG`.
 - A `SIGNPATH_API_TOKEN` secret on the `signing` environment.
 - The SignPath GitHub App installed on this repository, which is how SignPath verifies build provenance.
+- A `MSWIN_SLACK_WEBHOOK_URL` secret holding an incoming webhook for the #mswin-release channel, where every mswin workflow reports.
 
 While `SIGNPATH_ORGANIZATION_ID` is unset, or `SIGNPATH_TEST_CERTIFICATE` is `true`, the signing step is skipped on every real publish, packages ship unsigned, and the index records `signed: false` for them. The workflow logs a warning in that case.
 
