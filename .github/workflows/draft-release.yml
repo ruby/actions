@@ -300,7 +300,7 @@ jobs:
               }]
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.MSWIN_SLACK_WEBHOOK_URL }}
         if: always()
 
   release:

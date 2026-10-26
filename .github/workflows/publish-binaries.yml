@@ -191,7 +191,7 @@ jobs:
               }]
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.MSWIN_SLACK_WEBHOOK_URL }}
         if: always()
 
   # Index regeneration and staging cleanup are a separate job so that a
@@ -238,5 +238,5 @@ jobs:
               }]
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNAPSHOT_SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.MSWIN_SLACK_WEBHOOK_URL }}
         if: failure()
