@@ -56,7 +56,7 @@ Every built zip is smoke-tested in the workflow. The zip is extracted, the root 
 
 ## Publishing
 
-Release packages ride along with the source release, in the same two phases. `draft-release` builds the zip from the same draft tarball it stages for the source release and stages it unsigned as `pub/tmp/ruby-<version>-x64-mswin64_140-draft.zip`. When ruby/ruby's publish workflow dispatches `publish-binaries`, that staged zip is signed through SignPath under the `signing` environment and promoted to `pub/ruby/binaries/mswin64/`.
+Release packages ride along with the source release, in the same two phases. `draft-release` builds the zip from the same draft tarball it stages for the source release and stages it unsigned as `pub/tmp/ruby-<version>-x64-mswin64_140-draft.zip`. When ruby/ruby's publish workflow dispatches `publish-binaries`, that staged zip is promoted to `pub/ruby/binaries/mswin64/` under the `signing` environment. It is meant to be signed through SignPath on the way, but there is no production certificate yet, so packages currently ship unsigned.
 
 Signing sits in the publish phase rather than the draft phase because a draft tag gets re-cut freely. Signing at draft time would burn a SignPath signing request and a human approval on every re-cut, and each re-cut would overwrite a zip that had already been signed and approved. Signing once, when the release actually becomes public, means one signing request and one approval per release, on exactly the bytes that ship.
 

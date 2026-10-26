@@ -2,6 +2,8 @@
 
 Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
+**Current status:** packages are published unsigned. This project does not have a production signing certificate yet, so the signing step is skipped and `index.json` records `signed: false` for every build. The process below takes effect once that certificate is in place.
+
 The Windows binary packages (`ruby-<version>-x64-mswin64_140.zip`) published under `https://cache.ruby-lang.org/pub/ruby/binaries/mswin64/` are built on GitHub Actions in this repository and signed through SignPath when the release is published. Two manual approvals gate every production signature: the `signing` deployment environment in this repository, and the signing request itself in the SignPath UI, where SignPath Foundation requires per-request approval for production certificates. The workflow waits up to an hour for the latter, so approve the SignPath request promptly after approving the environment. Every signature carries an RFC 3161 timestamp. `index.json` in `pub/ruby/binaries/` records for each build whether it is signed.
 
 ## What is signed
@@ -46,4 +48,4 @@ Whether a given build is signed is recorded in <https://cache.ruby-lang.org/pub/
 
 ## Required setup
 
-Signing depends on repository configuration that does not live in this repository. See the "Required setup" section of the README for the `signing` environment, the SignPath repository variables and the API token secret. Until those are in place the signing step is skipped, packages ship unsigned, and the index records `signed: false` for them.
+Signing depends on repository configuration that does not live in this repository. See the "Required setup" section of the README for the `signing` environment, the SignPath repository variables and the API token secret. Until those are in place, or while `SIGNPATH_TEST_CERTIFICATE` is `true`, the signing step is skipped, packages ship unsigned, and the index records `signed: false` for them.
