@@ -44,7 +44,9 @@ jobs:
           sudo apt-get install --no-install-recommends -y ruby bundler
 
       - name: Checkout ${{ github.repository }}
-        run: git clone --depth=1 https://github.com/$GITHUB_REPOSITORY .
+        # A branch dispatched before it is merged has to index with its
+        # own update_binaries_index.rb, not the one on master.
+        run: git clone --depth=1 --branch "$GITHUB_REF_NAME" https://github.com/$GITHUB_REPOSITORY .
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
