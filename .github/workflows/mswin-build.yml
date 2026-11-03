@@ -1,10 +1,10 @@
 name: mswin-build
 
-# Build a relocatable binary zip package for Windows (x64-mswin64_140).
-# The zip layout is a public contract for tooling that consumes these
-# packages: a single root directory named after the package, holding
-# bin/, lib/, include/, share/ and LICENSES/.  A .sha256 checksum file
-# is generated next to the zip.
+# Build a relocatable binary zip package for Windows (x64-mswin64_140 or
+# arm64-mswin64_140).  The zip layout is a public contract for tooling
+# that consumes these packages: a single root directory named after the
+# package, holding bin/, lib/, include/, share/ and LICENSES/.  A .sha256
+# checksum file is generated next to the zip.
 
 on:
   workflow_call:
@@ -24,6 +24,11 @@ on:
         type: string
         required: false
         default: ''
+      arch:
+        description: 'Target architecture, x64 or arm64. arm64 builds natively on a windows-11-arm runner.'
+        type: string
+        required: false
+        default: x64
     outputs:
       pkg-name:
         description: 'Name of the built package (zip root directory).'
@@ -34,14 +39,22 @@ permissions:
 
 jobs:
   build:
-    name: mswin package ${{ inputs.version || 'master' }}
-    runs-on: windows-2022
+    name: mswin package ${{ inputs.version || 'master' }} ${{ inputs.arch }}
+    runs-on: ${{ inputs.arch == 'arm64' && 'windows-11-arm' || 'windows-2022' }}
     outputs:
       pkg-name: ${{ steps.pkg.outputs.pkg_name }}
     env:
       TARGET_VERSION: ${{ inputs.version }}
       REVISION: ${{ inputs.revision }}
-      VCPKG_DEFAULT_TRIPLET: x64-windows
+      PKG_ARCH: ${{ inputs.arch }}
+      VCPKG_DEFAULT_TRIPLET: ${{ inputs.arch }}-windows
+      # Only arm64-windows is overridden there, so x64 keeps the stock
+      # triplet.
+      VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\actions\tool\mswin\vcpkg-triplets
+      # The windows-11-arm image defaults to MSVC 14.51, whose ARM64 code
+      # generation is broken (see the overlay triplet), and still has
+      # 14.44.  Ruby is built with the same toolset as its libraries.
+      VSDEVCMD_ARGS: ${{ inputs.arch == 'arm64' && '-arch=arm64 -host_arch=arm64 -vcvars_ver=14.44' || '-arch=amd64 -host_arch=amd64' }}
       # Commit in ruby/ruby that tool/binary-package.rb is fetched from.
       # Bumping this SHA is the whole sync with upstream.
       BINARY_PACKAGE_REF: f132ecd1d9c9ff21f60737b23e28175946070f90
@@ -52,7 +65,8 @@ jobs:
 
       - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
-          ruby-version: '3.2'
+          # windows-11-arm has no Ruby older than 3.4.
+          ruby-version: ${{ inputs.arch == 'arm64' && '3.4' || '3.2' }}
           bundler: none
           windows-toolchain: none
 
@@ -113,7 +127,7 @@ jobs:
           if [ ! -f src/vcpkg.json ]; then
             cp actions/tool/mswin/vcpkg-ruby_3_3.json src/vcpkg.json
           fi
-          opt_dir="${GITHUB_WORKSPACE//\\//}/src/vcpkg_installed/x64-windows"
+          opt_dir="${GITHUB_WORKSPACE//\\//}/src/vcpkg_installed/$VCPKG_DEFAULT_TRIPLET"
           args="--disable-install-doc --with-opt-dir=$opt_dir"
           if grep -q '"gmp"' src/vcpkg.json; then
             args="$args --with-gmp"
@@ -150,7 +164,7 @@ jobs:
         id: vcpkg-cache
         with:
           path: src\vcpkg_installed
-          key: windows-2022-mswin-vcpkg-${{ hashFiles('src/vcpkg.json') }}
+          key: mswin-vcpkg-${{ inputs.arch }}-${{ hashFiles('src/vcpkg.json', 'actions/tool/mswin/vcpkg-triplets/*') }}
 
       - name: Install libraries with vcpkg
         # The registry pinned by `builtin-baseline` can need a newer tool
@@ -167,7 +181,7 @@ jobs:
       - name: Set up VS environment
         run: |
           set > old.env
-          for /f "usebackq delims=" %%I in (`vswhere.exe -latest -products * -property installationPath`) do @call "%%I\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+          for /f "usebackq delims=" %%I in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath`) do @call "%%I\Common7\Tools\VsDevCmd.bat" %VSDEVCMD_ARGS%
           set TMP=%RUNNER_TEMP%
           set TEMP=%RUNNER_TEMP%
           set > new.env
@@ -190,7 +204,7 @@ jobs:
 
       - name: Link vcpkg DLLs into the build directory
         run: |
-          for %%I in (%GITHUB_WORKSPACE%\src\vcpkg_installed\x64-windows\bin\*.dll) do (
+          for %%I in (%GITHUB_WORKSPACE%\src\vcpkg_installed\%VCPKG_DEFAULT_TRIPLET%\bin\*.dll) do (
             if not %%~nI == readline mklink %%~nxI %%I
           )
         working-directory: build
@@ -199,6 +213,14 @@ jobs:
       - name: nmake extract-gems
         run: nmake extract-gems
         working-directory: build
+        shell: cmd
+
+      - name: Generate revision.h
+        # Mirrors ruby/ruby's windows.yml, which found that the
+        # windows-11-arm runner cannot run tool/file2lastrev.rb.
+        if: inputs.version == '' && inputs.arch == 'arm64'
+        run: win32\lastrev.bat | win32\ifchange.bat --timestamp=.revision.time revision.h -
+        working-directory: src
         shell: cmd
 
       - name: nmake
@@ -230,7 +252,7 @@ jobs:
           ruby_exe=$(find stage -name ruby.exe -path '*bin*')
           info=$(PATH="$PWD/build:$PATH" "$ruby_exe" -e 'print [RUBY_VERSION, RUBY_PATCHLEVEL, RUBY_PLATFORM].join(" ")')
           read -r ver patch platform <<< "$info"
-          test "$platform" = x64-mswin64_140
+          test "$platform" = "$PKG_ARCH-mswin64_140"
           if [ -n "$TARGET_VERSION" ]; then
             pkg_name="ruby-$TARGET_VERSION${REVISION:+-$REVISION}-$platform"
           else
@@ -265,7 +287,7 @@ jobs:
         run: >-
           ruby binary-package.rb --stage=stage
           --name=%PKG_NAME% --srcdir=src
-          --vcpkg-dir=src/vcpkg_installed/x64-windows
+          --vcpkg-dir=src/vcpkg_installed/%VCPKG_DEFAULT_TRIPLET%
           --output=pkg/%PKG_NAME%.zip
         shell: cmd
 
@@ -336,7 +358,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "text": "${{ job.status }}: mswin package ${{ inputs.version || 'master' }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
+                "text": "${{ job.status }}: mswin package ${{ inputs.version || 'master' }} ${{ inputs.arch }} <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
                 "color": "danger"
               }]
             }

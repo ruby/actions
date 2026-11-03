@@ -105,7 +105,7 @@ runs:
         tar -x -f "$env:ZIP" -C verify-signed
         $root = "verify-signed\$env:PKG_NAME"
         $targets = @(Get-Item "$root\bin\ruby.exe", "$root\bin\rubyw.exe") +
-          @(Get-ChildItem "$root\bin\x64-vcruntime140-ruby*.dll") +
+          @(Get-ChildItem "$root\bin\*-vcruntime140-ruby*.dll") +
           @(Get-ChildItem -Recurse "$root\lib\ruby" -Filter *.so)
         if ($targets.Count -lt 3) { throw "unexpectedly few signing targets: $($targets.Count)" }
         if ($env:REQUIRE_TRUST -eq 'true') {
