@@ -27,7 +27,7 @@ For release managers, see <https://bugs.ruby-lang.org/projects/ruby/wiki/HowToRe
 | `snapshot-master` | Daily 18:30 UTC | Build a snapshot tarball from the master branch, run tests on Ubuntu/macOS/Windows, and upload to S3 |
 | `snapshot-ruby_X_Y` | Daily 18:30 UTC | Same as above, but for each maintenance branch (ruby\_3\_3, ruby\_3\_4, ruby\_4\_0) |
 | `draft-release` | On `draft/v*` tag push | Create a draft release package, run multi-platform tests, upload to S3, and open a release PR on ruby/www.ruby-lang.org |
-| `mswin-snapshot` | Daily 19:30 UTC | Build a relocatable Windows (mswin) binary zip from the master branch, publish it unsigned under `pub/ruby/binaries/mswin64/dev/`, and prune to the newest 30 |
+| `mswin-snapshot` | Daily 19:30 UTC | Build relocatable Windows (mswin) binary zips for x64 and arm64 from the master branch, publish them unsigned under `pub/ruby/binaries/mswin64/dev/`, and prune to the newest 30 of each platform |
 | `mswin-release` | Manual | Build a relocatable Windows (mswin) binary zip from an official release tarball (Ruby 3.3 or later), sign it, and publish it. Used to backfill versions released before this pipeline existed, and to reissue a package under a new revision |
 | `Publish mswin binary package` | On `publish-binaries` dispatch | Sign the staged zip, promote it from `pub/tmp/` to `pub/ruby/binaries/mswin64/`, and regenerate the binaries index |
 | `Remove pub/tmp/ruby-*` | Manual | Remove temporary draft release packages from S3 and purge CDN caches |
