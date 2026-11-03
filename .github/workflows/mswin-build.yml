@@ -297,7 +297,7 @@ jobs:
           if (Test-Path "smoke\$pkg\bin\vcruntime140.dll") { throw "vcruntime140.dll must not be bundled" }
           $ruby = "smoke\$pkg\bin\ruby.exe"
           $env:Path = "$env:SystemRoot\System32"
-          $out = & $ruby -v -ropenssl -rfiddle -rpsych -rzlib -e "puts :ok"
+          $out = & $ruby -v actions\tool\mswin\smoke.rb
           $out | Write-Host
           if ($LASTEXITCODE -ne 0) { throw "ruby.exe exited with $LASTEXITCODE" }
           if ($out -notcontains 'ok') { throw "unexpected smoke test output" }
