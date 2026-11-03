@@ -8,6 +8,10 @@
 # from scratch; S3 is the single source of truth, so a lost or corrupt
 # index heals on the next run.
 #
+# x64 and arm64 packages share the directory and the index.  Tags are
+# assigned within each platform, so a consumer filters by "platform"
+# before resolving a tag.
+#
 # Tag vocabulary (follows ruby-build naming):
 #   release 4.0.5        -> ["4.0.5", "4.0", "4"]
 #   prerelease 4.1.0-rc1 -> ["4.1.0-rc1"]  (exact match only)
@@ -60,7 +64,7 @@ require 'json'
 BUCKET = 'ftp.r-l.o'
 PREFIX = 'pub/ruby/binaries/mswin64/'
 INDEX_KEY = 'pub/ruby/binaries/index.json'
-PLATFORM = 'x64-mswin64_140'
+PLATFORM = /(?:x64|arm64)-mswin64_140/
 
 Build = Struct.new(
   :name, :version, :channel, :revision, :tags, :platform, :url, :sha256,
@@ -87,7 +91,6 @@ def scan_builds(bucket)
     basename = File.basename(obj.key)
     common = {
       name: basename.delete_suffix('.zip'),
-      platform: PLATFORM,
       url: "https://cache.ruby-lang.org/#{obj.key}",
       sha256: sha256_for(bucket, obj.key),
       size: obj.size,
@@ -95,11 +98,12 @@ def scan_builds(bucket)
       signed: signed?(bucket, obj.key),
     }
     if obj.key.start_with?("#{PREFIX}dev/")
-      m = basename.match(/\Aruby-(?<ver>\d+\.\d+\.\d+dev)-(?<date>\d{8})-(?<commit>\h{10})-#{PLATFORM}\.zip\z/o)
+      m = basename.match(/\Aruby-(?<ver>\d+\.\d+\.\d+dev)-(?<date>\d{8})-(?<commit>\h{10})-(?<platform>#{PLATFORM})\.zip\z/o)
       raise "unrecognized dev package name: #{basename}" unless m
       series = m[:ver][/\A\d+\.\d+/]
       builds << Build.new(
         version: m[:ver],
+        platform: m[:platform],
         channel: 'dev',
         revision: nil,
         tags: [
@@ -114,10 +118,11 @@ def scan_builds(bucket)
     else
       # A trailing -<digits> is a reissue revision; a trailing -rc1 or
       # -preview1 is a prerelease.
-      m = basename.match(/\Aruby-(?<ver>\d+\.\d+\.\d+(?:-[a-z]\w*)?)(?:-(?<rev>\d+))?-#{PLATFORM}\.zip\z/o)
+      m = basename.match(/\Aruby-(?<ver>\d+\.\d+\.\d+(?:-[a-z]\w*)?)(?:-(?<rev>\d+))?-(?<platform>#{PLATFORM})\.zip\z/o)
       raise "unrecognized release package name: #{basename}" unless m
       builds << Build.new(
         version: m[:ver],
+        platform: m[:platform],
         channel: m[:ver].include?('-') ? 'prerelease' : 'release',
         revision: m[:rev]&.to_i || 0,
         tags: [], # assigned by tag_releases once all revisions are known
@@ -131,7 +136,7 @@ def scan_builds(bucket)
 end
 
 def tag_releases(builds)
-  builds.reject { |b| b.channel == 'dev' }.group_by(&:version).each_value do |revisions|
+  builds.reject { |b| b.channel == 'dev' }.group_by { |b| [b.platform, b.version] }.each_value do |revisions|
     winner = revisions.max_by(&:revision)
     revisions.each do |b|
       # A superseded revision keeps only its revisioned exact name, so
@@ -148,12 +153,11 @@ def tag_releases(builds)
 end
 
 def tag_ruby_dev(builds)
-  newest = builds.select { |b| b.channel == 'dev' }
-                 .map { |b| b.version[/\A\d+\.\d+/] }
-                 .max_by { |s| Gem::Version.new(s) }
-  return unless newest
-  builds.each do |b|
-    b.tags << 'ruby-dev' if b.channel == 'dev' && b.version.start_with?("#{newest}.")
+  builds.select { |b| b.channel == 'dev' }.group_by(&:platform).each_value do |devs|
+    newest = devs.map { |b| b.version[/\A\d+\.\d+/] }.max_by { |s| Gem::Version.new(s) }
+    devs.each do |b|
+      b.tags << 'ruby-dev' if b.version.start_with?("#{newest}.")
+    end
   end
 end
 
@@ -165,7 +169,8 @@ def sort_builds(builds)
   # channel rank decides: Gem::Version would order the string segments
   # of "4.1.0.dev" and "4.1.0.preview1" alphabetically and sink today's
   # snapshot below a months-old preview.  The commit breaks ties between
-  # two dev builds of the same day so the order stays total.
+  # two dev builds of the same day, and the platform between the x64 and
+  # arm64 packages of one build, so the order stays total.
   builds.sort_by do |b|
     [
       Gem::Version.new(b.version.sub(/dev\z/, '').sub(/-.*\z/, '')),
@@ -173,6 +178,7 @@ def sort_builds(builds)
       b.revision || 0, # dev builds carry no revision
       b.commit_date || b.published_at,
       b.commit || '',
+      b.platform,
     ]
   end.reverse
 end
