@@ -28,7 +28,7 @@ For release managers, see <https://bugs.ruby-lang.org/projects/ruby/wiki/HowToRe
 | `snapshot-ruby_X_Y` | Daily 18:30 UTC | Same as above, but for each maintenance branch (ruby\_3\_3, ruby\_3\_4, ruby\_4\_0) |
 | `draft-release` | On `draft/v*` tag push | Create a draft release package, run multi-platform tests, upload to S3, and open a release PR on ruby/www.ruby-lang.org |
 | `mswin-snapshot` | Daily 19:30 UTC | Build relocatable Windows (mswin) binary zips for x64 and arm64 from the master branch, publish them unsigned under `pub/ruby/binaries/mswin64/dev/`, and prune to the newest 30 of each platform |
-| `mswin-release` | Manual | Build a relocatable Windows (mswin) binary zip from an official release tarball (Ruby 3.3 or later), sign it, and publish it. Used to backfill versions released before this pipeline existed, and to reissue a package under a new revision |
+| `mswin-release` | Manual | Build a relocatable Windows (mswin) binary zip for x64 or arm64 from an official release tarball (Ruby 3.3 or later, 3.4 or later on arm64), sign it, and publish it. Used to backfill versions released before this pipeline existed, and to reissue a package under a new revision |
 | `Publish mswin binary package` | On `publish-binaries` dispatch | Sign the staged zip, promote it from `pub/tmp/` to `pub/ruby/binaries/mswin64/`, and regenerate the binaries index |
 | `Remove pub/tmp/ruby-*` | Manual | Remove temporary draft release packages from S3 and purge CDN caches |
 | `coverage` | Every 3 hours | Run the test suite with gcov coverage and upload reports to S3 |
@@ -110,10 +110,11 @@ Use this to backfill a version released before this pipeline existed, or to reis
 1. Open <https://github.com/ruby/actions/actions/workflows/mswin-release.yml>
 2. Click **Run workflow**
 3. Enter the released version (e.g. `3.4.5`) in **Packaging target version**
-4. Leave **Reissue revision** empty for a first publication. To replace an already published package, enter the next integer (`1`, `2`, ...), which publishes `ruby-<version>-<revision>-x64-mswin64_140.zip` and makes the index resolve `<version>` to it
-5. Click **Run workflow**
-6. Approve the `signing` environment deployment when the `publish` job requests it
-7. The zip is published under `pub/ruby/binaries/mswin64/` and the index is regenerated
+4. Leave **Reissue revision** empty for a first publication. To replace an already published package, enter the next integer (`1`, `2`, ...), which publishes `ruby-<version>-<revision>-<arch>-mswin64_140.zip` and makes the index resolve `<version>` to it
+5. Pick `x64` or `arm64` in **Target architecture**
+6. Click **Run workflow**
+7. Approve the `signing` environment deployment when the `publish` job requests it
+8. The zip is published under `pub/ruby/binaries/mswin64/` and the index is regenerated
 
 To get the zip without publishing it, download the `build` job's artifact and do not approve the deployment.
 

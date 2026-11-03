@@ -1,9 +1,9 @@
 name: mswin-release
 
-# Build a relocatable mswin binary zip from an official release
-# tarball, sign it, and publish it under pub/ruby/binaries/mswin64/.
-# Works for Ruby 3.3 and later.  The heavy lifting lives in
-# mswin-build.yml.
+# Build a relocatable mswin binary zip for x64 or arm64 from an official
+# release tarball, sign it, and publish it under
+# pub/ruby/binaries/mswin64/.  Works for Ruby 3.3 and later, 3.4 and
+# later on arm64.  The heavy lifting lives in mswin-build.yml.
 #
 # This is the backfill path for versions released before the mswin
 # pipeline existed (or after a signing-only reissue).  Regular releases
@@ -19,6 +19,13 @@ on:
         description: Reissue revision (e.g. 1 publishes ruby-<version>-1-x64-mswin64_140). Leave empty for the first publication.
         required: false
         default: ''
+      ARCH:
+        description: Target architecture
+        type: choice
+        options:
+          - x64
+          - arm64
+        default: x64
 
 permissions:
   contents: read
@@ -45,7 +52,7 @@ jobs:
             echo "::error::REVISION must be a positive integer without leading zeros, got: $REVISION"
             exit 1
           fi
-          dest="pub/ruby/binaries/mswin64/ruby-${TARGET_VERSION}${REVISION:+-$REVISION}-x64-mswin64_140.zip"
+          dest="pub/ruby/binaries/mswin64/ruby-${TARGET_VERSION}${REVISION:+-$REVISION}-${ARCH}-mswin64_140.zip"
           if aws s3api head-object --bucket ftp.r-l.o --key "$dest" >/dev/null 2>&1; then
             echo "::error::s3://ftp.r-l.o/$dest is already published. Reissue under the next revision instead."
             exit 1
@@ -53,6 +60,7 @@ jobs:
         env:
           TARGET_VERSION: ${{ inputs.TARGET_VERSION }}
           REVISION: ${{ inputs.REVISION }}
+          ARCH: ${{ inputs.ARCH }}
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
@@ -63,11 +71,13 @@ jobs:
     with:
       version: ${{ inputs.TARGET_VERSION }}
       revision: ${{ inputs.REVISION }}
+      arch: ${{ inputs.ARCH }}
     secrets: inherit
 
   publish:
     needs: build
-    runs-on: windows-2022
+    # The smoke test runs the package, so it needs a native runner.
+    runs-on: ${{ inputs.ARCH == 'arm64' && 'windows-11-arm' || 'windows-2022' }}
     # Deployment protection on the signing environment provides the
     # manual approval gate and confines the SignPath credentials.
     environment: signing
@@ -161,7 +171,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "title": "Publish mswin package ${{ inputs.TARGET_VERSION }}",
+                "title": "Publish mswin package ${{ inputs.TARGET_VERSION }} ${{ inputs.ARCH }}",
                 "title_link": "https://cache.ruby-lang.org/pub/ruby/binaries/mswin64/",
                 "text": "${{ job.status }}: publish <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>",
                 "color": "${{ job.status == 'success' && 'good' || 'danger' }}"
