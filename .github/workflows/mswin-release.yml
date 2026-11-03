@@ -76,7 +76,8 @@ jobs:
 
   publish:
     needs: build
-    # The smoke test runs the package, so it needs a native runner.
+    # The smoke test runs the package, so it needs a native runner.  The
+    # windows-11-arm image ships the AWS CLI the upload uses as well.
     runs-on: ${{ inputs.ARCH == 'arm64' && 'windows-11-arm' || 'windows-2022' }}
     # Deployment protection on the signing environment provides the
     # manual approval gate and confines the SignPath credentials.
