@@ -1,13 +1,15 @@
 name: Publish mswin binary package
 
-# Signs the mswin zip staged by draft-release and promotes it from
-# pub/tmp/ to its permanent home under pub/ruby/binaries/mswin64/, then
-# regenerates the binaries index.  Dispatched by ruby/ruby's publish
-# workflow alongside the tarball publication, or run by hand.
+# Signs the x64 and arm64 mswin zips staged by draft-release and
+# promotes them from pub/tmp/ to their permanent home under
+# pub/ruby/binaries/mswin64/, then regenerates the binaries index.
+# Dispatched by ruby/ruby's publish workflow alongside the tarball
+# publication, or run by hand.
 #
 # Signing happens here rather than at draft time because a draft tag is
 # re-cut freely; signing once, at the moment a release actually becomes
-# public, means one signing request and one approval per release.
+# public, means one signing request, and one SignPath approval, per
+# package.
 #
 # The destination is append-only: an existing zip is never overwritten,
 # a fixed package is reissued under a new revisioned name instead.
@@ -33,7 +35,12 @@ permissions:
 jobs:
   publish:
     if: ${{ github.repository == 'ruby/actions' }}
-    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+    # Native runner for the smoke test, see mswin-release.yml.
+    runs-on: ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-2022' }}
     # Deployment protection on the signing environment provides the
     # manual approval gate and confines the SignPath credentials.
     environment: signing
@@ -42,15 +49,13 @@ jobs:
       # The SignPath connector fetches the unsigned artifact through the
       # GitHub API.
       actions: read
-    outputs:
-      pkg-name: ${{ steps.staged.outputs.pkg_name }}
     env:
       TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION || github.event.client_payload.version }}
+      ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Fetch staged package
-        id: staged
         # The staged zip is what draft-release built from the release
         # tarball.  Verify it against the checksum the build produced
         # before handing it to the signing service.
@@ -63,9 +68,9 @@ jobs:
             echo "::error::TARGET_VERSION is not a release version: $TARGET_VERSION"
             exit 1
           fi
-          pkg="ruby-${TARGET_VERSION}-x64-mswin64_140"
+          pkg="ruby-${TARGET_VERSION}-${ARCH}-mswin64_140"
           if ! aws s3api head-object --bucket ftp.r-l.o --key "pub/tmp/${pkg}-draft.zip" >/dev/null 2>&1; then
-            echo "::error::no staged zip at pub/tmp/${pkg}-draft.zip. Check that draft-release's mswin-stage job succeeded for ${TARGET_VERSION}."
+            echo "::error::no staged zip at pub/tmp/${pkg}-draft.zip. Check that draft-release's mswin-package (${ARCH}) / stage job succeeded for ${TARGET_VERSION}."
             exit 1
           fi
           mkdir pkg
@@ -73,7 +78,6 @@ jobs:
           aws s3 cp "s3://ftp.r-l.o/pub/tmp/${pkg}-draft.zip.sha256" "pkg/${pkg}.zip.sha256" --no-progress
           (cd pkg && sha256sum -c "${pkg}.zip.sha256")
           echo "PKG_NAME=$pkg" >> "$GITHUB_ENV"
-          echo "pkg_name=$pkg" >> "$GITHUB_OUTPUT"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
@@ -139,8 +143,11 @@ jobs:
             echo "::error::s3://ftp.r-l.o/$dest already exists; refusing to overwrite a published package. Reissue under a revision with mswin-release instead."
             exit 1
           fi
-          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/$dest" --no-progress --metadata signed=$SIGNED
+          # The checksum goes first.  tool/update_binaries_index.rb reads
+          # one for every zip it lists, so a zip left without it would stop
+          # the index for the other architecture too.
           aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/$dest.sha256" --no-progress
+          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/$dest" --no-progress --metadata signed=$SIGNED
           for f in "$dest" "$dest.sha256"; do
             curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$f"
           done
@@ -184,7 +191,7 @@ jobs:
           payload: |
             {
               "attachments": [{
-                "title": "Publish mswin package ${{ env.TARGET_VERSION }}",
+                "title": "Publish mswin package ${{ env.TARGET_VERSION }} ${{ matrix.arch }}",
                 "title_link": "https://cache.ruby-lang.org/pub/ruby/binaries/mswin64/",
                 "text": "${{ job.status }}: publish-binaries <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ env.TARGET_VERSION }}>",
                 "color": "${{ job.status == 'success' && 'good' || 'danger' }}"
@@ -199,10 +206,12 @@ jobs:
   # append-only guard in publish.
   index:
     needs: publish
-    if: ${{ !inputs.DRY_RUN }}
+    # Runs even when one architecture failed, so the other one still
+    # gets indexed.
+    if: ${{ !cancelled() && !inputs.DRY_RUN && needs.publish.result != 'skipped' }}
     runs-on: ubuntu-latest
     env:
-      PKG_NAME: ${{ needs.publish.outputs.pkg-name }}
+      TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION || github.event.client_payload.version }}
       AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: us-west-2
@@ -219,12 +228,18 @@ jobs:
       - name: Update binaries index
         run: ruby tool/update_binaries_index.rb --upload
 
-      - name: Remove staged package
+      - name: Remove staged packages
         run: |
           set -ex
-          for ext in .zip .zip.sha256; do
-            aws s3 rm "s3://ftp.r-l.o/pub/tmp/${PKG_NAME}-draft$ext"
-            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/${PKG_NAME}-draft$ext"
+          for arch in x64 arm64; do
+            pkg="ruby-${TARGET_VERSION}-${arch}-mswin64_140"
+            # A package that did not get published keeps its staged zip
+            # for a re-run.
+            aws s3api head-object --bucket ftp.r-l.o --key "pub/ruby/binaries/mswin64/$pkg.zip" >/dev/null 2>&1 || continue
+            for ext in .zip .zip.sha256; do
+              aws s3 rm "s3://ftp.r-l.o/pub/tmp/${pkg}-draft$ext"
+              curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/${pkg}-draft$ext"
+            done
           done
           curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/"
 

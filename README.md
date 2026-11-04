@@ -29,7 +29,7 @@ For release managers, see <https://bugs.ruby-lang.org/projects/ruby/wiki/HowToRe
 | `draft-release` | On `draft/v*` tag push | Create a draft release package, run multi-platform tests, upload to S3, and open a release PR on ruby/www.ruby-lang.org |
 | `mswin-snapshot` | Daily 19:30 UTC | Build relocatable Windows (mswin) binary zips for x64 and arm64 from the master branch, publish them unsigned under `pub/ruby/binaries/mswin64/dev/`, and prune to the newest 30 of each platform |
 | `mswin-release` | Manual | Build a relocatable Windows (mswin) binary zip for x64 or arm64 from an official release tarball (Ruby 3.3 or later, 3.4 or later on arm64), sign it, and publish it. Used to backfill versions released before this pipeline existed, and to reissue a package under a new revision |
-| `Publish mswin binary package` | On `publish-binaries` dispatch | Sign the staged zip, promote it from `pub/tmp/` to `pub/ruby/binaries/mswin64/`, and regenerate the binaries index |
+| `Publish mswin binary package` | On `publish-binaries` dispatch | Sign the staged x64 and arm64 zips, promote them from `pub/tmp/` to `pub/ruby/binaries/mswin64/`, and regenerate the binaries index |
 | `Remove pub/tmp/ruby-*` | Manual | Remove temporary draft release packages from S3 and purge CDN caches |
 | `coverage` | Every 3 hours | Run the test suite with gcov coverage and upload reports to S3 |
 | `Make HTML for docs.r-l.o/en/` | Daily 13:00 UTC | Build HTML documentation for each Ruby version and upload to S3 |
@@ -56,9 +56,9 @@ Every built zip is smoke-tested in the workflow. The zip is extracted, the root 
 
 ## Publishing
 
-Release packages ride along with the source release, in the same two phases. `draft-release` builds the zip from the same draft tarball it stages for the source release and stages it unsigned as `pub/tmp/ruby-<version>-x64-mswin64_140-draft.zip`. When ruby/ruby's publish workflow dispatches `publish-binaries`, that staged zip is promoted to `pub/ruby/binaries/mswin64/` under the `signing` environment. It is meant to be signed through SignPath on the way, but there is no production certificate yet, so packages currently ship unsigned.
+Release packages ride along with the source release, in the same two phases. `draft-release` builds the x64 and arm64 zips from the same draft tarball it stages for the source release and stages each unsigned as `pub/tmp/ruby-<version>-<arch>-mswin64_140-draft.zip`. When ruby/ruby's publish workflow dispatches `publish-binaries`, the staged zips are promoted to `pub/ruby/binaries/mswin64/` under the `signing` environment. The two architectures go through every step independently, so one failing never holds back the other. It is meant to be signed through SignPath on the way, but there is no production certificate yet, so packages currently ship unsigned.
 
-Signing sits in the publish phase rather than the draft phase because a draft tag gets re-cut freely. Signing at draft time would burn a SignPath signing request and a human approval on every re-cut, and each re-cut would overwrite a zip that had already been signed and approved. Signing once, when the release actually becomes public, means one signing request and one approval per release, on exactly the bytes that ship.
+Signing sits in the publish phase rather than the draft phase because a draft tag gets re-cut freely. Signing at draft time would burn a SignPath signing request and a human approval on every re-cut, and each re-cut would overwrite a zip that had already been signed and approved. Signing once, when the release actually becomes public, means one signing request, and one SignPath approval, per package, on exactly the bytes that ship.
 
 The mswin jobs are deliberately absent from the release job's `needs`, so a packaging failure never holds back the source release. The destination is append-only: an existing zip is never overwritten, and a package that has to be replaced is reissued under a revisioned name such as `ruby-3.4.5-1-x64-mswin64_140.zip`. Daily snapshots are published unsigned under `dev/`, keeping the newest 30 builds. See [SIGNING.md](SIGNING.md) for what is signed and how to verify it.
 
