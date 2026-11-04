@@ -29,6 +29,11 @@ on:
         type: string
         required: false
         default: x64
+      stage:
+        description: 'Stage the release zip unsigned as pub/tmp/<pkg-name>-draft.zip for publish-binaries to sign and publish. Used by draft-release.'
+        type: boolean
+        required: false
+        default: false
     outputs:
       pkg-name:
         description: 'Name of the built package (zip root directory).'
@@ -365,3 +370,54 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.MSWIN_SLACK_WEBHOOK_URL }}
         if: failure()
+
+  stage:
+    needs: build
+    if: inputs.stage
+    runs-on: ubuntu-latest
+    env:
+      PKG_NAME: ${{ needs.build.outputs.pkg-name }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ env.PKG_NAME }}
+          path: pkg
+
+      - name: Verify checksum
+        # The build already smoke-tested this zip against this checksum.
+        # Nothing has rewritten it since, so verify rather than
+        # regenerate, keeping the build's witness intact all the way to
+        # the signing job.
+        run: sha256sum -c "$PKG_NAME.zip.sha256"
+        working-directory: pkg
+        shell: bash
+
+      - name: Upload s3
+        run: |
+          set -ex
+          aws s3 cp "pkg/$PKG_NAME.zip" "s3://ftp.r-l.o/pub/tmp/$PKG_NAME-draft.zip" --no-progress --metadata signed=false
+          aws s3 cp "pkg/$PKG_NAME.zip.sha256" "s3://ftp.r-l.o/pub/tmp/$PKG_NAME-draft.zip.sha256" --no-progress
+          for f in "$PKG_NAME-draft.zip" "$PKG_NAME-draft.zip.sha256"; do
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/$f"
+          done
+          curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/pub/tmp/"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+        shell: bash
+
+      - uses: ruby/action-slack@d260b61aa817726d5bedd22dd6cc305787fa4cdd # v4.0.0
+        with:
+          payload: |
+            {
+              "attachments": [{
+                "title": "Stage mswin package ${{ inputs.version }} ${{ inputs.arch }}",
+                "title_link": "https://cache.ruby-lang.org/pub/tmp/",
+                "text": "${{ job.status }}: mswin-stage <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} at ${{ inputs.version }}>",
+                "color": "${{ job.status == 'success' && 'good' || 'danger' }}"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.MSWIN_SLACK_WEBHOOK_URL }}
+        if: always()
