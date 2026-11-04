@@ -2,8 +2,8 @@ name: mswin-release
 
 # Build a relocatable mswin binary zip for x64 or arm64 from an official
 # release tarball, sign it, and publish it under
-# pub/ruby/binaries/mswin64/.  Works for Ruby 3.3 and later, 3.4 and
-# later on arm64.  The heavy lifting lives in mswin-build.yml.
+# pub/ruby/binaries/mswin64/.  Works for Ruby 3.3 and later, 3.3.14
+# and later on arm64.  The heavy lifting lives in mswin-build.yml.
 #
 # This is the backfill path for versions released before the mswin
 # pipeline existed (or after a signing-only reissue).  Regular releases
