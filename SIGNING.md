@@ -20,7 +20,7 @@ Only PE files built from the Ruby source tree are signed:
 - Dev snapshot builds under `dev/`. Only tagged releases are signed.
 - Extension gems compiled on the user's machine. Anything `gem install` builds locally is outside the package signature.
 
-The DLLs under `bin/` are a mix: `x64-vcruntime140-ruby*.dll` is signed, while `libssl-3-x64.dll`, `libcrypto-3-x64.dll`, `legacy.dll`, `yaml.dll`, `zlib1.dll`, `ffi-8.dll`, `gmp-10.dll` and `gmpxx-4.dll` come from vcpkg and are expected to report as unsigned.
+The DLLs under `bin/` are a mix: `x64-vcruntime140-ruby*.dll` is signed, while `libssl-3-x64.dll`, `libcrypto-3-x64.dll`, `legacy.dll`, `yaml.dll`, `zlib1.dll`, `ffi-8.dll`, `gmp-10.dll`, `gmpxx-4.dll` and, from Ruby 4.1, `mimalloc.dll` come from vcpkg and are expected to report as unsigned.
 
 ## Verifying a package
 
