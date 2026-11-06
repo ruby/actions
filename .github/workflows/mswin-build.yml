@@ -124,9 +124,13 @@ jobs:
         shell: bash
 
       - name: Prepare vcpkg manifest and configure args
+        id: config
         # Ruby 3.3 does not ship vcpkg.json.  Use the manifest vendored in
         # this repository, which mirrors the one on the ruby_3_4 branch.
         # --with-gmp is passed only when the manifest pulls in gmp.
+        # Snapshots and Ruby 4.1 and later are built with clang-cl, YJIT
+        # and mimalloc, like the fastest Windows lane of ruby/ruby's CI.
+        # Older trees support neither clang-cl nor --with-mimalloc.
         run: |
           set -ex
           if [ ! -f src/vcpkg.json ]; then
@@ -136,6 +140,13 @@ jobs:
           args="--disable-install-doc --with-opt-dir=$opt_dir"
           if grep -q '"gmp"' src/vcpkg.json; then
             args="$args --with-gmp"
+          fi
+          IFS=. read -r major minor _ <<< "$TARGET_VERSION"
+          if [ -z "$TARGET_VERSION" ] || [ "$major" -gt 4 ] || { [ "$major" -eq 4 ] && [ "$minor" -ge 1 ]; }; then
+            # CC= goes first, since configure.bat takes an argument without
+            # a leading dash after --with-<x> or --enable-<x> as its value.
+            args="CC=clang-cl $args --enable-yjit --with-mimalloc"
+            echo "fast=true" >> "$GITHUB_OUTPUT"
           fi
           echo "CONFIGURE_ARGS=$args" >> "$GITHUB_ENV"
         shell: bash
@@ -169,7 +180,7 @@ jobs:
         id: vcpkg-cache
         with:
           path: src\vcpkg_installed
-          key: mswin-vcpkg-${{ inputs.arch }}-${{ hashFiles('src/vcpkg.json', 'actions/tool/mswin/vcpkg-triplets/*') }}
+          key: mswin-vcpkg-${{ inputs.arch }}-${{ hashFiles('src/vcpkg.json', 'src/win32/vcpkg-ports/**', 'actions/tool/mswin/vcpkg-triplets/*') }}${{ steps.config.outputs.fast && '-mimalloc' || '' }}
 
       - name: Install libraries with vcpkg
         # The registry pinned by `builtin-baseline` can need a newer tool
@@ -178,7 +189,7 @@ jobs:
         run: |
           git -C "%VCPKG_INSTALLATION_ROOT%" pull --quiet
           call "%VCPKG_INSTALLATION_ROOT%\bootstrap-vcpkg.bat"
-          vcpkg install
+          vcpkg install ${{ steps.config.outputs.fast && '--x-feature=mimalloc' || '' }}
         working-directory: src
         shell: cmd
         if: ${{ ! steps.vcpkg-cache.outputs.cache-hit }}
@@ -201,6 +212,11 @@ jobs:
             Select-Object -ExpandProperty InputObject |
             Add-Content -Path $env:GITHUB_ENV
         shell: pwsh
+
+      - name: clang-cl version
+        if: steps.config.outputs.fast
+        run: where clang-cl && clang-cl --version
+        shell: cmd
 
       - name: Configure
         run: ..\src\win32\configure.bat %CONFIGURE_ARGS%
@@ -330,6 +346,21 @@ jobs:
           if ($out -notcontains 'ok') { throw "unexpected smoke test output" }
           & $ruby -e "abort RbConfig::CONFIG['configure_args'] if RbConfig::CONFIG['configure_args'] =~ /[A-Za-z]:[\/\\]/"
           if ($LASTEXITCODE -ne 0) { throw "configure_args retains a build-machine absolute path" }
+        shell: pwsh
+
+      - name: Check YJIT, clang-cl and mimalloc
+        # A package that still runs does not prove that mimalloc took
+        # effect, nor that it left the CRT heap of the whole process alone,
+        # which a mimalloc.dll importing mimalloc-redirect.dll would not.
+        if: steps.config.outputs.fast
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bin = "smoke\$env:PKG_NAME\bin"
+          & "$bin\ruby.exe" --yjit -e "abort 'YJIT is not enabled' unless RubyVM::YJIT.enabled?; abort RbConfig::CONFIG['CC'] unless RbConfig::CONFIG['CC'] =~ /\Aclang-cl\b/"
+          if ($LASTEXITCODE -ne 0) { throw "the package is not built with YJIT and clang-cl" }
+          $dll = Get-Item "$bin\*-ruby*.dll"
+          if (!(dumpbin /dependents $dll | Select-String -SimpleMatch mimalloc.dll)) { throw "$dll does not import mimalloc.dll" }
+          if (dumpbin /dependents "$bin\mimalloc.dll" | Select-String -SimpleMatch mimalloc-redirect) { throw "mimalloc.dll imports mimalloc-redirect.dll" }
         shell: pwsh
 
       - name: Build a C extension gem
