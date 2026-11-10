@@ -59,7 +59,7 @@ jobs:
           xz -9 lcov-all.info
           RUBY_RUBY_GITHUB_SHA=$(git rev-parse HEAD)
           aws s3 cp lcov-all.info.xz s3://rubyci/coverage/lcov-all-"$RUBY_RUBY_GITHUB_SHA".info.xz --no-progress
-          aws s3 sync lcov-out s3://rubyci/coverage-latest-html --no-progress
+          aws s3 sync lcov-out s3://rubyci/coverage-latest-html --no-progress --delete
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.RUBYCI_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.RUBYCI_AWS_SECRET_ACCESS_KEY }}
