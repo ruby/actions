@@ -227,6 +227,9 @@ jobs:
 
       - name: Update binaries index
         run: ruby tool/update_binaries_index.rb --upload
+        env:
+          # The apt ruby cannot install gems into /var/lib/gems, see update_index.yml
+          GEM_HOME: ${{ runner.temp }}/gems
 
       - name: Remove staged packages
         run: |
