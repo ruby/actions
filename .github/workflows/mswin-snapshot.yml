@@ -41,7 +41,7 @@ jobs:
         run: |
           set -x
           sudo apt-get update -q || :
-          sudo apt-get install --no-install-recommends -y ruby bundler
+          sudo apt-get install --no-install-recommends -y ruby bundler zip unzip
 
       - name: Checkout ${{ github.repository }}
         # A branch dispatched before it is merged has to index with its
@@ -66,6 +66,26 @@ jobs:
             name=$(basename "$zip")
             aws s3 cp "$zip" "s3://ftp.r-l.o/$dev/$name" --no-progress --metadata signed=false
             aws s3 cp "$zip.sha256" "s3://ftp.r-l.o/$dev/$name.sha256" --no-progress
+          done
+
+      - name: Upload ruby-head
+        # ruby-head-<platform>.zip is a stable URL for the newest dev
+        # build, which setup-ruby installs as `mswin`.  The zip root has to
+        # match the file name, so the package is repacked under the new
+        # name rather than copied, and the overwritten object is purged.
+        run: |
+          set -ex
+          dev=pub/ruby/binaries/mswin64/dev
+          for zip in pkg/*.zip; do
+            pkg=$(basename "$zip" .zip)
+            head=ruby-head-$(echo "$pkg" | cut -d- -f5-)
+            rm -rf repack "$head.zip"
+            mkdir repack
+            unzip -q "$zip" -d repack
+            mv "repack/$pkg" "repack/$head"
+            (cd repack && zip -qrX "../$head.zip" "$head")
+            aws s3 cp "$head.zip" "s3://ftp.r-l.o/$dev/$head.zip" --no-progress --metadata signed=false
+            curl -sS -X PURGE -H "Fastly-Soft-Purge:1" "https://cache.ruby-lang.org/$dev/$head.zip"
           done
 
       - name: Prune old dev builds
