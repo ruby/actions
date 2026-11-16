@@ -88,6 +88,8 @@ def scan_builds(bucket)
   builds = []
   bucket.objects(prefix: PREFIX).each do |obj|
     next unless obj.key.end_with?('.zip')
+    # A repacked copy of the newest dev build under a stable URL, see mswin-snapshot.yml
+    next if obj.key.match?(%r{\A#{PREFIX}dev/ruby-head-#{PLATFORM}\.zip\z}o)
     basename = File.basename(obj.key)
     common = {
       name: basename.delete_suffix('.zip'),
