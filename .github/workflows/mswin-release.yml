@@ -185,6 +185,9 @@ jobs:
   index:
     needs: publish
     runs-on: ubuntu-latest
+    concurrency: # see publish-binaries.yml
+      group: update-binaries-index
+      queue: max
     steps:
       - name: Install libraries
         run: |
