@@ -210,6 +210,15 @@ jobs:
     # gets indexed.
     if: ${{ !cancelled() && !inputs.DRY_RUN && needs.publish.result != 'skipped' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # tool/update_binaries_index.rb rewrites the whole index from a bucket
+    # listing, so two runs at once can each drop what the other one
+    # published.  Every job that runs it shares this group.
+    concurrency:
+      group: update-binaries-index
+      # Without it a waiting run is cancelled by the next one, which would
+      # skip the staged cleanup and the notification below.
+      queue: max
     env:
       TARGET_VERSION: ${{ github.event.inputs.TARGET_VERSION || github.event.client_payload.version }}
       AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}

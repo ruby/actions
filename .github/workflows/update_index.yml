@@ -14,6 +14,11 @@ jobs:
   update_index:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # tool/update_index.rb rewrites the whole index from a bucket listing,
+    # so two runs at once can each drop what the other one indexed.
+    concurrency:
+      group: update-index
+      queue: max
     steps:
       - name: Install libraries
         run: |

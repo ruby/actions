@@ -32,6 +32,13 @@ jobs:
     needs: build
     if: ${{ !cancelled() && github.repository == 'ruby/actions' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # See publish-binaries.yml.  The group covers the whole job because an
+    # index scan in another run fails on a zip listed without its checksum,
+    # which the upload and the prune here both leave for a moment.
+    concurrency:
+      group: update-binaries-index
+      queue: max
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.FTP_R_L_O_AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.FTP_R_L_O_AWS_SECRET_ACCESS_KEY }}
