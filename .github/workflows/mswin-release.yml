@@ -185,6 +185,7 @@ jobs:
   index:
     needs: publish
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     concurrency: # see publish-binaries.yml
       group: update-binaries-index
       queue: max
