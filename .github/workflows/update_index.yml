@@ -18,8 +18,6 @@ jobs:
     # so two runs at once can each drop what the other one indexed.
     concurrency:
       group: update-index
-      # Without it a waiting run is cancelled by the next one, which loses
-      # nothing here but leaves a release dispatch marked as cancelled.
       queue: max
     steps:
       - name: Install libraries
